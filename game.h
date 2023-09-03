@@ -22,23 +22,27 @@ class Game {
   Position mousePos;
   Rectangle* randHighlightSquare;
   Rectangle* selectedSquare;
+  Piece* selectedPiece;
   std::string selectedSquarePosition;
-  std::vector<Rectangle*> canMoveSquares;
-  std::vector<std::string> canMovePositions;
+  std::vector<Rectangle> canMoveSquares;
 
   void updateMousePos();
   void updateHighlightSquares();
   void updateCanMoveSquares();
   void updatePieces();
   void sendBoardToPieces();
+  void movePiece(Piece* piece, std::string posTo);
+  void movePiece(Piece* piece, Position PosTo);
   bool isPieceAt(char col, char row);
   bool isPieceAt(char col, int row);
   bool isPieceAt(std::string pos);
   bool isPieceAt(Position pos);
   Piece* getPieceAt(char col, char row);
   Piece* getPieceAt(char col, int row);
-  Piece* getPieceAt(std::string position);
-  Piece* getPieceAt(Position position);
+  Piece* getPieceAt(std::string pos);
+  Piece* getPieceAt(Position pos);
+  bool isValidMove(std::string pos);
+  bool isValidMove(Position pos);
 };
 
 #endif

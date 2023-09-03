@@ -11,7 +11,6 @@
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/type_ptr.hpp>
 #include <iostream>
-#include <string>
 #include <unordered_map>
 
 #include "correctIncludeOrder.cpp"
@@ -37,6 +36,7 @@ extern float mouseX;
 extern float mouseY;
 extern bool leftClick;
 extern bool rightClick;
+extern bool clicking;
 
 // functions
 Position strToPos(std::string posStr);

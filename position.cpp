@@ -27,12 +27,26 @@ Position::Position(char col, char row) {
   }
 }
 
+Position::Position(std::string pos) {
+  if (validPos(pos)) {
+    this->col = pos[0];
+    this->row = pos[1] - '0';
+  } else {
+    this->col = '\0';
+    this->row = -1;
+  }
+}
+
 bool Position::validPos(char col, int row) {
   if (col >= 'a' && col <= 'h' && row >= 1 && row <= 8) {
     return true;
   } else {
     return false;
   }
+}
+
+bool Position::validPos(std::string pos) {
+  return validPos(pos[0], pos[1] - '0');
 }
 
 bool Position::isValid() { return validPos(col, row); }

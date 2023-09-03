@@ -22,6 +22,7 @@ class Piece {
   void updateValidMoves();
 
  protected:
+  int vertices[20];
   int width;
   int height;
   int nrChannels;
@@ -44,8 +45,8 @@ class Piece {
   bool isPieceAt(Position pos);
   Piece* getPieceAt(char col, char row);
   Piece* getPieceAt(char col, int row);
-  Piece* getPieceAt(std::string position);
-  Piece* getPieceAt(Position position);
+  Piece* getPieceAt(std::string pos);
+  Piece* getPieceAt(Position pos);
 };
 
 class white_pawn : public Piece {

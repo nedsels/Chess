@@ -20,28 +20,29 @@ Piece::Piece(std::string position) {
 }
 
 void Piece::setup() {
-  float x = border + squareSize * (float)(position.col - 'a');
-  float y = border + squareSize * (float)(position.row - 1);
-
   float vertices[20] = {
       // bottom left
-      (2.0f / SCR_WIDTH) * x - 1.0f, (2.0f / 768.0f) * y - 1.0f,  // vertices
-      0.0f, 0.0f, 0.0f,                                           // texture
+      (2.0f / SCR_WIDTH) * border - 1.0f, (2.0f / SCR_HEIGHT) * border - 1.0f,
+      0.0f,        // vertices
+      0.0f, 0.0f,  // texture
 
       // top left
-      (2.0f / SCR_HEIGHT) * x - 1.0f,
-      (2.0f / 768.0f) * (y + squareSize) - 1.0f,  // vertices
-      0.0f, 0.0f, 1.0f,                           // texture
+      (2.0f / SCR_HEIGHT) * border - 1.0f,
+      (2.0f / SCR_HEIGHT) * (border + squareSize) - 1.0f,
+      0.0f,        // vertices
+      0.0f, 1.0f,  // texture
 
       // bottom right
-      (2.0f / SCR_WIDTH) * (x + squareSize) - 1.0f,
-      (2.0f / 768.0f) * y - 1.0f,  // vertices
-      0.0f, 1.0f, 0.0f,            // texture
+      (2.0f / SCR_WIDTH) * (border + squareSize) - 1.0f,
+      (2.0f / SCR_HEIGHT) * border - 1.0f,
+      0.0f,        // vertices
+      1.0f, 0.0f,  // texture
 
       // top right
-      (2.0f / SCR_WIDTH) * (x + squareSize) - 1.0f,
-      (2.0f / SCR_HEIGHT) * (y + squareSize) - 1.0f,  // vertices
-      0.0f, 1.0f, 1.0f                                // texture
+      (2.0f / SCR_WIDTH) * (border + squareSize) - 1.0f,
+      (2.0f / SCR_HEIGHT) * (border + squareSize) - 1.0f,
+      0.0f,       // vertices
+      1.0f, 1.0f  // texture
   };
 
   unsigned int indices[6] = {
@@ -391,13 +392,15 @@ std::vector<std::string> Piece::getKingMoves(Piece* piece, char color) {
         continue;
       }
 
-      Position checkPosition = Position((char)(pos[0] + i), char(pos[1] + j));
+      Position checkPosition = Position((char)(pos[0] + i), (char)(pos[1] + j));
 
-      if (isPieceAt(checkPosition) &&
-          getPieceAt(checkPosition)->color == otherColor) {
-        validMoves.push_back(posToStr(checkPosition));
-      } else if (!isPieceAt(checkPosition)) {
-        validMoves.push_back(posToStr(checkPosition));
+      if (checkPosition.isValid()) {
+        if (isPieceAt(checkPosition) &&
+            getPieceAt(checkPosition)->color == otherColor) {
+          validMoves.push_back(posToStr(checkPosition));
+        } else if (!isPieceAt(checkPosition)) {
+          validMoves.push_back(posToStr(checkPosition));
+        }
       }
     }
   }
@@ -410,6 +413,10 @@ void Piece::draw() {
   glBindTexture(GL_TEXTURE_2D, texture);
 
   shader.use();
+  float offsetX = (2.0f / SCR_WIDTH) * (squareSize * (position.col - 'a'));
+  float offsetY = (2.0f / SCR_WIDTH) * (squareSize * (position.row - 1));
+
+  shader.set2f("offset", offsetX, offsetY);
   glBindVertexArray(VAO);
   glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
 }
@@ -428,6 +435,14 @@ void Piece::updateValidMoves() {
   } else if (type == "king") {
     validMoves = getKingMoves(this, color);
   }
+
+  std::cout << type << std::endl;
+
+  for (int i = 0; i < validMoves.size(); i++) {
+    std::cout << validMoves[i] << std::endl;
+  }
+
+  std::cout << std::endl;
 }
 
 white_pawn::white_pawn(std::string position) : Piece(position) {
@@ -712,7 +727,7 @@ Piece* Piece::getPieceAt(char col, char row) {
 }
 
 Piece* Piece::getPieceAt(char col, int row) {
-  return getPieceAt(col, 'a' + row - 1);
+  return getPieceAt(col, (char)('a' + row - 1));
 }
 
 Piece* Piece::getPieceAt(std::string position) {
@@ -723,6 +738,4 @@ Piece* Piece::getPieceAt(std::string position) {
   return (*board)[position];
 }
 
-Piece* Piece::getPieceAt(Position position) {
-  return getPieceAt(posToStr(position));
-}
+Piece* Piece::getPieceAt(Position pos) { return getPieceAt(posToStr(pos)); }

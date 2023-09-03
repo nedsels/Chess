@@ -21,6 +21,7 @@ float mouseX;
 float mouseY;
 bool leftClick;
 bool rightClick;
+bool clicking;
 
 // functions
 Position strToPos(std::string posStr) {

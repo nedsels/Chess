@@ -1,3 +1,5 @@
+#include <thread>
+
 #include "game.h"
 
 GLFWwindow* initializeWindow(int width, int height, const char* name);
@@ -6,9 +8,10 @@ void processInput(GLFWwindow* window);
 void mouse_callback(GLFWwindow* window, double xposIn, double yposIn);
 void mouse_button_callback(GLFWwindow* window, int button, int action,
                            int mods);
+void framedelay();
 
-float deltaTime = 0.0f;
 float lastFrame = 0.0f;
+float framerate = 60.0f;
 
 int main() {
   GLFWwindow* window = initializeWindow(SCR_WIDTH, SCR_HEIGHT, "Chess");
@@ -24,6 +27,8 @@ int main() {
 
     glClearColor(0.1f, 0.1f, 0.1f, 1.0f);
     glClear(GL_COLOR_BUFFER_BIT);
+
+    framedelay();
 
     game.draw();
 
@@ -77,11 +82,6 @@ void processInput(GLFWwindow* window) {
   if (glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS) {
     glfwSetWindowShouldClose(window, true);
   }
-
-  // Accounting for frame rate
-  float currentFrame = (float)glfwGetTime();
-  deltaTime = currentFrame - lastFrame;
-  lastFrame = currentFrame;
 }
 
 void mouse_callback(GLFWwindow* window, double xposIn, double yposIn) {
@@ -91,11 +91,31 @@ void mouse_callback(GLFWwindow* window, double xposIn, double yposIn) {
 
 void mouse_button_callback(GLFWwindow* window, int button, int action,
                            int mods) {
-  if (button == GLFW_MOUSE_BUTTON_LEFT && action == GLFW_PRESS) {
-    leftClick = true;
+  if (clicking && action == GLFW_RELEASE) {
+    clicking = false;
   }
 
-  if (button == GLFW_MOUSE_BUTTON_RIGHT && action == GLFW_PRESS) {
-    rightClick = true;
+  if (!clicking) {
+    if (button == GLFW_MOUSE_BUTTON_LEFT && action == GLFW_PRESS) {
+      leftClick = true;
+      clicking = true;
+    }
+
+    if (button == GLFW_MOUSE_BUTTON_RIGHT && action == GLFW_PRESS) {
+      rightClick = true;
+      clicking = true;
+    }
   }
+}
+
+void framedelay() {
+  float deltaTime = (float)glfwGetTime() - lastFrame;
+  float tick = 1.0f / framerate;
+
+  if (deltaTime < tick) {
+    std::this_thread::sleep_for(
+        std::chrono::nanoseconds((int)((tick - deltaTime) * pow(10, 9))));
+  }
+
+  lastFrame = (float)glfwGetTime();
 }

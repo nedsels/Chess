@@ -2,12 +2,14 @@
 
 Game::Game() {
   leftClick = false;
+  rightClick = false;
 
   grid = Grid();
   background =
       Rectangle(0.0f, 0.0f, (float)SCR_WIDTH, (float)SCR_HEIGHT, darkGray);
   randHighlightSquare = nullptr;
   selectedSquare = nullptr;
+  selectedPiece = nullptr;
 
   board["a1"] = new white_rook("a1");
   board["b1"] = new white_knight("b1");
@@ -50,7 +52,7 @@ void Game::draw() {
     selectedSquare->draw();
 
     for (int i = 0; i < canMoveSquares.size(); i++) {
-      canMoveSquares[i]->draw();
+      canMoveSquares[i].draw();
     }
   }
 }
@@ -69,13 +71,25 @@ void Game::updateMousePos() {
 }
 
 void Game::updateHighlightSquares() {
-  if (selectedSquare && rightClick) {
+  if (selectedSquare && isValidMove(mousePos) && leftClick) {
+    movePiece(selectedPiece, mousePos);
+
     delete selectedSquare;
     selectedSquare = nullptr;
+
+    selectedPiece = nullptr;
+
+    selectedSquarePosition = "\0";
+  } else if (selectedSquare && rightClick) {
+    delete selectedSquare;
+    selectedSquare = nullptr;
+
+    selectedPiece = nullptr;
 
     selectedSquarePosition = "\0";
   } else if (board.find(posToStr(mousePos)) != board.end() && leftClick) {
     selectedSquarePosition = posToStr(mousePos);
+    selectedPiece = getPieceAt(selectedSquarePosition);
 
     if (selectedSquare) {
       *selectedSquare =
@@ -108,19 +122,16 @@ void Game::updateHighlightSquares() {
 }
 
 void Game::updateCanMoveSquares() {
-  for (int i = 0; i < canMoveSquares.size(); i++) {
-    delete canMoveSquares[i];
-    canMoveSquares[i] = nullptr;
-  }
-
   canMoveSquares.clear();
 
-  canMovePositions = getPieceAt(selectedSquarePosition)->validMoves;
-
-  for (int i = 0; i < canMovePositions.size(); i++) {
-    canMoveSquares.push_back(new Rectangle(
-        border + squareSize * (canMovePositions[i][0] - 'a'),
-        border + squareSize * (canMovePositions[i][1] - '1'), blue, 0.7f));
+  if (selectedPiece) {
+    for (int i = 0; i < selectedPiece->validMoves.size(); i++) {
+      // std::cout << selectedPiece->validMoves[i] << std::endl;
+      canMoveSquares.push_back(Rectangle(
+          border + squareSize * (selectedPiece->validMoves[i][0] - 'a'),
+          border + squareSize * (selectedPiece->validMoves[i][1] - '1'), blue,
+          0.7f));
+    }
   }
 }
 
@@ -138,24 +149,33 @@ void Game::sendBoardToPieces() {
 void Game::updatePieces() {
   sendBoardToPieces();
 
-  std::vector<std::string> kingPositions;
-
   for (char i = 'a'; i <= 'h'; i++) {
     for (int j = 1; j <= 8; j++) {
       std::string position = i + std::to_string(j);
       if (board.find(position) != board.end()) {
-        if (board[position]->type != "king") {
-          board[position]->updateValidMoves();
-        } else {
-          kingPositions.push_back(position);
-        }
+        board[position]->updateValidMoves();
       }
     }
   }
+}
 
-  for (int i = 0; i < kingPositions.size(); i++) {
-    board[kingPositions[i]]->updateValidMoves();
+void Game::movePiece(Piece* piece, std::string posTo) {
+  std::string posFrom = posToStr(piece->position);
+
+  if (isPieceAt(posTo)) {
+    delete board[posTo];
+    board[posTo] = nullptr;
   }
+
+  board[posTo] = piece;
+  piece->position = strToPos(posTo);
+  board.erase(posFrom);
+
+  updatePieces();
+}
+
+void Game::movePiece(Piece* piece, Position posTo) {
+  movePiece(piece, posToStr(posTo));
 }
 
 bool Game::isPieceAt(char col, char row) {
@@ -198,17 +218,27 @@ Piece* Game::getPieceAt(char col, int row) {
   return getPieceAt(col, (char)('a' + (row - 1)));
 }
 
-Piece* Game::getPieceAt(std::string position) {
-  if (!isPieceAt(position)) {
+Piece* Game::getPieceAt(std::string pos) {
+  if (!isPieceAt(pos)) {
     return nullptr;
   }
 
-  return board[position];
+  return board[pos];
 }
 
-Piece* Game::getPieceAt(Position position) {
-  return getPieceAt(posToStr(position));
+Piece* Game::getPieceAt(Position pos) { return getPieceAt(posToStr(pos)); }
+
+bool Game::isValidMove(std::string pos) {
+  for (int i = 0; i < selectedPiece->validMoves.size(); i++) {
+    if (selectedPiece->validMoves[i] == pos) {
+      return true;
+    }
+  }
+
+  return false;
 }
+
+bool Game::isValidMove(Position pos) { return isValidMove(posToStr(pos)); }
 
 Game::~Game() {
   std::string position;
@@ -232,10 +262,5 @@ Game::~Game() {
   if (selectedSquare) {
     delete selectedSquare;
     selectedSquare = nullptr;
-  }
-
-  for (int i = 0; i < canMoveSquares.size(); i++) {
-    delete canMoveSquares[i];
-    canMoveSquares[i] = nullptr;
   }
 }
