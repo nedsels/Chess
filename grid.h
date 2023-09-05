@@ -12,7 +12,7 @@ class Grid {
 
   Rectangle squares[64];
 
-  void draw(std::unordered_map<std::string, Piece*> board);
+  void draw(std::unordered_map<Position, Piece*> board);
 };
 
 #endif

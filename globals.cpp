@@ -24,24 +24,6 @@ bool rightClick;
 bool clicking;
 
 // functions
-Position strToPos(std::string posStr) {
-  Position position;
-
-  position.col = posStr[0];
-  position.row = posStr[1] - '0';
-
-  return position;
-}
-
-std::string posToStr(Position pos) {
-  std::string position;
-
-  position.push_back(pos.col);
-  position.push_back('0' + pos.row);
-
-  return position;
-}
-
 std::string combineChars(char a, char b) {
   std::string output;
 
@@ -49,4 +31,10 @@ std::string combineChars(char a, char b) {
   output.push_back(b);
 
   return output;
+}
+
+int charToInt(char letter) { return letter - '0'; }
+
+Position add(Position pos1, int colChange, int rowChange) {
+  return Position((char)(pos1.col + colChange), pos1.row + rowChange);
 }

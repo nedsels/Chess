@@ -7,35 +7,45 @@ Game::Game() {
   grid = Grid();
   background =
       Rectangle(0.0f, 0.0f, (float)SCR_WIDTH, (float)SCR_HEIGHT, darkGray);
+
+  turn = 'W';
   randHighlightSquare = nullptr;
   selectedSquare = nullptr;
   selectedPiece = nullptr;
+  controlledSquares['W'] = std::unordered_map<Position, bool>();
+  controlledSquares['B'] = std::unordered_map<Position, bool>();
 
-  board["a1"] = new white_rook("a1");
-  board["b1"] = new white_knight("b1");
-  board["c1"] = new white_bishop("c1");
-  board["d1"] = new white_queen("d1");
-  board["e1"] = new white_king("e1");
-  board["f1"] = new white_bishop("f1");
-  board["g1"] = new white_knight("g1");
-  board["h1"] = new white_rook("h1");
-  board["a8"] = new black_rook("a8");
-  board["b8"] = new black_knight("b8");
-  board["c8"] = new black_bishop("c8");
-  board["d8"] = new black_queen("d8");
-  board["e8"] = new black_king("e8");
-  board["f8"] = new black_bishop("f8");
-  board["g8"] = new black_knight("g8");
-  board["h8"] = new black_rook("h8");
+  board[(Position) "a1"] = new white_rook((Position) "a1");
+  board[(Position) "b1"] = new white_knight((Position) "b1");
+  board[(Position) "c1"] = new white_bishop((Position) "c1");
+  board[(Position) "d1"] = new white_queen((Position) "d1");
+  board[(Position) "e1"] = new white_king((Position) "e1");
+  board[(Position) "f1"] = new white_bishop((Position) "f1");
+  board[(Position) "g1"] = new white_knight((Position) "g1");
+  board[(Position) "h1"] = new white_rook((Position) "h1");
+  board[(Position) "a8"] = new black_rook((Position) "a8");
+  board[(Position) "b8"] = new black_knight((Position) "b8");
+  board[(Position) "c8"] = new black_bishop((Position) "c8");
+  board[(Position) "d8"] = new black_queen((Position) "d8");
+  board[(Position) "e8"] = new black_king((Position) "e8");
+  board[(Position) "f8"] = new black_bishop((Position) "f8");
+  board[(Position) "g8"] = new black_knight((Position) "g8");
+  board[(Position) "h8"] = new black_rook((Position) "h8");
 
-  board["h3"] = new white_pawn("h3");
-  board["d3"] = new black_pawn("d3");
-  board["c3"] = new black_pawn("c3");
+  for (char i = 'a'; i <= 'h'; i++) {
+    board[Position(i, 2)] = new white_pawn(Position(i, 2));
+    board[Position(i, 7)] = new black_pawn(Position(i, 7));
+  }
 
-  /* for (char i = 'a'; i <= 'h'; i++) {
-    board[std::string(1, i) + "2"] = new white_pawn(std::string(1, i) + "2");
-    board[std::string(1, i) + "7"] = new black_pawn(std::string(1, i) + "7");
-  } */
+  for (char i = 'a'; i <= 'h'; i++) {
+    for (int j = 1; j <= 8; j++) {
+      Position position = Position(i, j);
+      if (board.find(position) != board.end()) {
+        board[position]->board = &board;
+        board[position]->controlledSquares = &controlledSquares;
+      }
+    }
+  }
 
   updatePieces();
 }
@@ -59,7 +69,19 @@ void Game::draw() {
 
 void Game::update() {
   updateMousePos();
-  updateHighlightSquares();
+  updateSelectedSquare();
+  updateRandHighlightSquare();
+
+  leftClick = false;
+  rightClick = false;
+}
+
+void Game::nextTurn() {
+  if (turn == 'W') {
+    turn = 'B';
+  } else {
+    turn = 'W';
+  }
 }
 
 void Game::updateMousePos() {
@@ -70,7 +92,7 @@ void Game::updateMousePos() {
   mousePos = Position(col, row);
 }
 
-void Game::updateHighlightSquares() {
+void Game::updateSelectedSquare() {
   if (selectedSquare && isValidMove(mousePos) && leftClick) {
     movePiece(selectedPiece, mousePos);
 
@@ -78,18 +100,14 @@ void Game::updateHighlightSquares() {
     selectedSquare = nullptr;
 
     selectedPiece = nullptr;
-
-    selectedSquarePosition = "\0";
   } else if (selectedSquare && rightClick) {
     delete selectedSquare;
     selectedSquare = nullptr;
 
     selectedPiece = nullptr;
-
-    selectedSquarePosition = "\0";
-  } else if (board.find(posToStr(mousePos)) != board.end() && leftClick) {
-    selectedSquarePosition = posToStr(mousePos);
-    selectedPiece = getPieceAt(selectedSquarePosition);
+  } else if (board.find(mousePos) != board.end() &&
+             board.at(mousePos)->color == turn && leftClick) {
+    selectedPiece = getPieceAt(mousePos);
 
     if (selectedSquare) {
       *selectedSquare =
@@ -103,7 +121,9 @@ void Game::updateHighlightSquares() {
 
     updateCanMoveSquares();
   }
+}
 
+void Game::updateRandHighlightSquare() {
   if (mousePos.isValid() && !randHighlightSquare) {
     randHighlightSquare =
         new Rectangle(border + squareSize * (mousePos.col - 'a'),
@@ -116,51 +136,53 @@ void Game::updateHighlightSquares() {
     delete randHighlightSquare;
     randHighlightSquare = nullptr;
   }
-
-  leftClick = false;
-  rightClick = false;
 }
 
 void Game::updateCanMoveSquares() {
   canMoveSquares.clear();
 
   if (selectedPiece) {
-    for (int i = 0; i < selectedPiece->validMoves.size(); i++) {
-      // std::cout << selectedPiece->validMoves[i] << std::endl;
-      canMoveSquares.push_back(Rectangle(
-          border + squareSize * (selectedPiece->validMoves[i][0] - 'a'),
-          border + squareSize * (selectedPiece->validMoves[i][1] - '1'), blue,
-          0.7f));
-    }
-  }
-}
+    for (char i = 'a'; i <= 'h'; i++) {
+      for (int j = 1; j <= 8; j++) {
+        Position pos = Position(i, j);
 
-void Game::sendBoardToPieces() {
-  for (char i = 'a'; i <= 'h'; i++) {
-    for (int j = 1; j <= 8; j++) {
-      std::string position = i + std::to_string(j);
-      if (board.find(position) != board.end()) {
-        board[position]->board = &board;
+        if (selectedPiece->validMoves.find(pos) !=
+            selectedPiece->validMoves.end()) {
+          canMoveSquares.push_back(
+              Rectangle(border + squareSize * (pos.col - 'a'),
+                        border + squareSize * (pos.row - 1), blue, 0.7f));
+        }
       }
     }
   }
 }
 
 void Game::updatePieces() {
-  sendBoardToPieces();
+  controlledSquares['W'].clear();
+  controlledSquares['B'].clear();
+
+  std::vector<Position> kingPositions;
 
   for (char i = 'a'; i <= 'h'; i++) {
     for (int j = 1; j <= 8; j++) {
-      std::string position = i + std::to_string(j);
+      Position position = Position(i, j);
       if (board.find(position) != board.end()) {
+        if (board[position]->type == "king") {
+          kingPositions.push_back(position);
+        }
+
         board[position]->updateValidMoves();
       }
     }
   }
+
+  for (int i = 0; i < kingPositions.size(); i++) {
+    board[kingPositions[i]]->invalidateMoveIntoCheck();
+  }
 }
 
-void Game::movePiece(Piece* piece, std::string posTo) {
-  std::string posFrom = posToStr(piece->position);
+void Game::movePiece(Piece* piece, Position posTo) {
+  Position posFrom = piece->position;
 
   if (isPieceAt(posTo)) {
     delete board[posTo];
@@ -168,33 +190,23 @@ void Game::movePiece(Piece* piece, std::string posTo) {
   }
 
   board[posTo] = piece;
-  piece->position = strToPos(posTo);
+  piece->position = posTo;
   board.erase(posFrom);
 
   updatePieces();
-}
 
-void Game::movePiece(Piece* piece, Position posTo) {
-  movePiece(piece, posToStr(posTo));
+  nextTurn();
 }
 
 bool Game::isPieceAt(char col, char row) {
-  if (board.find(combineChars(col, row)) != board.end()) {
-    return true;
-  } else {
-    return false;
-  }
+  return isPieceAt(Position(col, row));
 }
 
 bool Game::isPieceAt(char col, int row) {
-  if (board.find(combineChars(col, 'a' + row - 1)) != board.end()) {
-    return true;
-  } else {
-    return false;
-  }
+  return isPieceAt(Position(col, row));
 }
 
-bool Game::isPieceAt(std::string pos) {
+bool Game::isPieceAt(Position pos) {
   if (board.find(pos) != board.end()) {
     return true;
   } else {
@@ -202,23 +214,15 @@ bool Game::isPieceAt(std::string pos) {
   }
 }
 
-bool Game::isPieceAt(Position pos) { return isPieceAt(posToStr(pos)); }
-
 Piece* Game::getPieceAt(char col, char row) {
-  std::string position = combineChars(col, row);
-
-  if (!isPieceAt(position)) {
-    return nullptr;
-  }
-
-  return board[position];
+  return getPieceAt(Position(col, row));
 }
 
 Piece* Game::getPieceAt(char col, int row) {
-  return getPieceAt(col, (char)('a' + (row - 1)));
+  return getPieceAt(Position(col, row));
 }
 
-Piece* Game::getPieceAt(std::string pos) {
+Piece* Game::getPieceAt(Position pos) {
   if (!isPieceAt(pos)) {
     return nullptr;
   }
@@ -226,26 +230,18 @@ Piece* Game::getPieceAt(std::string pos) {
   return board[pos];
 }
 
-Piece* Game::getPieceAt(Position pos) { return getPieceAt(posToStr(pos)); }
-
-bool Game::isValidMove(std::string pos) {
-  for (int i = 0; i < selectedPiece->validMoves.size(); i++) {
-    if (selectedPiece->validMoves[i] == pos) {
-      return true;
-    }
+bool Game::isValidMove(Position pos) {
+  if (selectedPiece->validMoves.find(pos) != selectedPiece->validMoves.end()) {
+    return true;
+  } else {
+    return false;
   }
-
-  return false;
 }
 
-bool Game::isValidMove(Position pos) { return isValidMove(posToStr(pos)); }
-
 Game::~Game() {
-  std::string position;
-
   for (char i = 'a'; i <= 'h'; i++) {
     for (int j = 1; j <= 8; j++) {
-      position = i + std::to_string(j);
+      Position position = Position(i, j);
       if (board.find(position) != board.end()) {
         delete board[position];
         board[position] = nullptr;

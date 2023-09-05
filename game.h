@@ -9,39 +9,37 @@ class Game {
  public:
   Game();
 
-  Rectangle background;
-  Grid grid;
-  std::unordered_map<std::string, Piece*> board;
-
   void draw();
   void update();
 
   ~Game();
 
  private:
+  Rectangle background;
+  Grid grid;
+  std::unordered_map<Position, Piece*> board;
   Position mousePos;
   Rectangle* randHighlightSquare;
   Rectangle* selectedSquare;
   Piece* selectedPiece;
-  std::string selectedSquarePosition;
   std::vector<Rectangle> canMoveSquares;
+  std::unordered_map<char, std::unordered_map<Position, bool>>
+      controlledSquares;
 
+  char turn;
+  void nextTurn();
   void updateMousePos();
-  void updateHighlightSquares();
+  void updateSelectedSquare();
+  void updateRandHighlightSquare();
   void updateCanMoveSquares();
   void updatePieces();
-  void sendBoardToPieces();
-  void movePiece(Piece* piece, std::string posTo);
-  void movePiece(Piece* piece, Position PosTo);
+  void movePiece(Piece* piece, Position posTo);
   bool isPieceAt(char col, char row);
   bool isPieceAt(char col, int row);
-  bool isPieceAt(std::string pos);
   bool isPieceAt(Position pos);
   Piece* getPieceAt(char col, char row);
   Piece* getPieceAt(char col, int row);
-  Piece* getPieceAt(std::string pos);
   Piece* getPieceAt(Position pos);
-  bool isValidMove(std::string pos);
   bool isValidMove(Position pos);
 };
 

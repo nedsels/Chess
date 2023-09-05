@@ -18,14 +18,14 @@ Grid::Grid() {
   }
 }
 
-void Grid::draw(std::unordered_map<std::string, Piece*> board) {
+void Grid::draw(std::unordered_map<Position, Piece*> board) {
   for (int i = 0; i < 64; i++) {
     squares[i].draw();
   }
 
   for (char i = 'a'; i <= 'h'; i++) {
     for (int j = 1; j <= 8; j++) {
-      std::string position = i + std::to_string(j);
+      Position position = Position(i, j);
       if (board.find(position) != board.end()) {
         board[position]->draw();
       }

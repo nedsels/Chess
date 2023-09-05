@@ -1,11 +1,13 @@
 #include "pieces.h"
 
-Piece::Piece(std::string position) {
+Piece::Piece() {}
+
+Piece::Piece(Position position) {
   shader = Shader("vertexShader_pieces.vert", "fragmentShader_pieces.frag");
   canEnPassant = false;
-  this->position = strToPos(position);
+  this->position = position;
   board = nullptr;
-  validMoves = std::vector<std::string>();
+  validMoves = std::unordered_map<Position, bool>();
 
   setup();
 
@@ -76,16 +78,10 @@ void Piece::setup() {
   glBindVertexArray(0);
 }
 
-std::vector<std::string> Piece::getPawnMoves(Piece* piece, char color) {
-  std::vector<std::string> validMoves;
-
-  if (piece == nullptr) {
-    return validMoves;
-  }
-
+void Piece::updatePawnMoves() {
   int dir;
   char otherColor;
-  if (piece->color == 'W') {
+  if (color == 'W') {
     dir = 1;
     otherColor = 'B';
   } else {
@@ -93,319 +89,231 @@ std::vector<std::string> Piece::getPawnMoves(Piece* piece, char color) {
     otherColor = 'W';
   }
 
-  std::string pos = posToStr(piece->position);
-
   // diagonals
-  std::string diagonal1 = combineChars(pos[0] - 1, pos[1] + dir);
-  if (isPieceAt(diagonal1)) {
-    validMoves.push_back(diagonal1);
+  Position diagonal1 = add(position, -1, dir);
+  controlledSquares->at(color)[diagonal1] = true;
+  if (isPieceAt(diagonal1) && getPieceAt(diagonal1)->color == otherColor) {
+    validMoves[diagonal1] = true;
   }
 
-  std::string diagonal2 = combineChars(pos[0] + 1, pos[1] + dir);
-  if (isPieceAt(diagonal2)) {
-    validMoves.push_back(diagonal2);
+  Position diagonal2 = add(position, 1, dir);
+  controlledSquares->at(color)[diagonal2] = true;
+  if (isPieceAt(diagonal2) && getPieceAt(diagonal2)->color == otherColor) {
+    validMoves[diagonal2] = true;
   }
 
   // in front
-  std::string inFront1 = combineChars(pos[0], pos[1] + dir);
+  Position inFront1 = add(position, 0, dir);
   if (!isPieceAt(inFront1)) {
-    validMoves.push_back(inFront1);
-  }
+    validMoves[inFront1] = true;
 
-  if ((piece->color == 'W' && pos[1] == '2') ||
-      (piece->color == 'B' && pos[1] == '7')) {
-    std::string inFront2 = combineChars(pos[0], pos[1] + 2 * dir);
-    if (!isPieceAt(inFront2)) {
-      validMoves.push_back(inFront2);
+    if ((color == 'W' && position.row == 2) ||
+        (color == 'B' && position.row == 7)) {
+      Position inFront2 = add(position, 0, 2 * dir);
+      if (!isPieceAt(inFront2)) {
+        validMoves[inFront2] = true;
+      }
     }
   }
 
   // en passant
-  if ((piece->color == 'W' && pos[1] == '5') ||
-      (piece->color == 'B' && pos[1] == '4')) {
-    std::string enPassant1 = combineChars(pos[0] - 1, pos[1] + dir);
-    std::string enPassant2 = combineChars(pos[0] + 1, pos[1] + dir);
+  if ((color == 'W' && position.row == 5) ||
+      (color == 'B' && position.row == 4)) {
+    Position enPassant1 = add(position, -1, dir);
+    Position checkPos1 = add(position, -1, 0);
 
-    if (isPieceAt(pos[0] - 1, pos[1])) {
-      Piece* checkPiece = getPieceAt(pos[0] - 1, pos[1]);
+    if (isPieceAt(checkPos1)) {
+      Piece* checkPiece = getPieceAt(checkPos1);
 
       if (checkPiece->type == "pawn" && checkPiece->color == otherColor &&
           checkPiece->canEnPassant) {
-        validMoves.push_back(enPassant1);
+        validMoves[enPassant1] = true;
       }
     }
 
-    if (isPieceAt(pos[0] + 1, pos[1])) {
-      Piece* checkPiece = getPieceAt(pos[0] + 1, pos[1]);
+    Position enPassant2 = add(position, 1, dir);
+    Position checkPos2 = add(position, 1, 0);
+
+    if (isPieceAt(checkPos2)) {
+      Piece* checkPiece = getPieceAt(checkPos2);
 
       if (checkPiece->type == "pawn" && checkPiece->color == otherColor &&
           checkPiece->canEnPassant) {
-        validMoves.push_back(enPassant2);
+        validMoves[enPassant2] = true;
       }
     }
   }
-
-  return validMoves;
 }
 
-std::vector<std::string> Piece::getBishopMoves(Piece* piece, char color) {
-  std::vector<std::string> validMoves;
-
-  if (piece == nullptr) {
-    return validMoves;
-  }
-
+void Piece::updateBishopMoves() {
   char otherColor;
-  if (piece->color == 'W') {
+  if (color == 'W') {
     otherColor = 'B';
   } else {
     otherColor = 'W';
   }
 
-  std::string pos = posToStr(piece->position);
+  for (int colDir = -1; colDir <= 1; colDir += 2) {
+    for (int rowDir = -1; rowDir <= 1; rowDir += 2) {
+      bool checkForPin = false;
+      Position pinPosition;
 
-  char i;
-  char j;
+      for (Position checkPosition = add(position, colDir, rowDir);
+           checkPosition.isValid();
+           checkPosition = add(checkPosition, colDir, rowDir)) {
+        if (isPieceAt(checkPosition)) {
+          if (!checkForPin) {
+            if (getPieceAt(checkPosition)->color == otherColor) {
+              validMoves[checkPosition] = true;
+              controlledSquares->at(color)[checkPosition] = true;
+              pinPosition = checkPosition;
+              checkForPin = true;
+              continue;
+            } else {
+              controlledSquares->at(color)[checkPosition] = true;
+              break;
+            }
+          } else if (checkForPin && getPieceAt(checkPosition)->type == "king" &&
+                     getPieceAt(checkPosition)->color == otherColor) {
+            board->at(pinPosition)->validMoves.clear();
+            break;
+          }
+        }
 
-  // up-right diagonal
-  i = (char)(pos[0] + 1);
-  j = (char)(pos[1] + 1);
-  while (Position(i, j).isValid()) {
-    if (isPieceAt(i, j)) {
-      if (getPieceAt(i, j)->color == otherColor) {
-        validMoves.push_back(combineChars(i, j));
+        if (!checkForPin) {
+          validMoves[checkPosition] = !checkForPin;
+          controlledSquares->at(color)[checkPosition] = true;
+        }
       }
-
-      break;
     }
-
-    validMoves.push_back(combineChars(i, j));
-
-    i++;
-    j++;
   }
-
-  // up-left diagonal
-  i = (char)(pos[0] - 1);
-  j = (char)(pos[1] + 1);
-  while (Position(i, j).isValid()) {
-    if (isPieceAt(i, j)) {
-      if (getPieceAt(i, j)->color == otherColor) {
-        validMoves.push_back(combineChars(i, j));
-      }
-
-      break;
-    }
-
-    validMoves.push_back(combineChars(i, j));
-
-    i--;
-    j++;
-  }
-
-  // down-right diagonal
-  i = (char)(pos[0] + 1);
-  j = (char)(pos[1] - 1);
-  while (Position(i, j).isValid()) {
-    if (isPieceAt(i, j)) {
-      if (getPieceAt(i, j)->color == otherColor) {
-        validMoves.push_back(combineChars(i, j));
-      }
-
-      break;
-    }
-
-    validMoves.push_back(combineChars(i, j));
-
-    i++;
-    j--;
-  }
-
-  // down-left diagonal
-  i = (char)(pos[0] - 1);
-  j = (char)(pos[1] - 1);
-  while (Position(i, j).isValid()) {
-    if (isPieceAt(i, j)) {
-      if (getPieceAt(i, j)->color == otherColor) {
-        validMoves.push_back(combineChars(i, j));
-      }
-
-      break;
-    }
-
-    validMoves.push_back(combineChars(i, j));
-
-    i--;
-    j--;
-  }
-
-  return validMoves;
 }
 
-std::vector<std::string> Piece::getKnightMoves(Piece* piece, char color) {
-  std::vector<std::string> validMoves;
-
-  if (piece == nullptr) {
-    return validMoves;
-  }
-
+void Piece::updateKnightMoves() {
   char otherColor;
-  if (piece->color == 'W') {
+  if (color == 'W') {
     otherColor = 'B';
   } else {
     otherColor = 'W';
   }
-
-  std::string pos = posToStr(piece->position);
 
   for (int i = -2; i <= 2; i += 4) {
     for (int j = -1; j <= 1; j += 2) {
-      Position checkPosition = Position((char)(pos[0] + i), (char)(pos[1] + j));
+      Position checkPosition = add(position, i, j);
+
       if (checkPosition.isValid()) {
-        if (isPieceAt(checkPosition) &&
-            getPieceAt(checkPosition)->color == otherColor) {
-          validMoves.push_back(posToStr(checkPosition));
-        } else if (!isPieceAt(checkPosition)) {
-          validMoves.push_back(posToStr(checkPosition));
+        if (isPieceAt(checkPosition)) {
+          if (getPieceAt(checkPosition)->color == otherColor) {
+            validMoves[checkPosition] = true;
+          }
+        } else {
+          validMoves[checkPosition] = true;
         }
+
+        controlledSquares->at(color)[checkPosition] = true;
       }
     }
   }
 
   for (int j = -2; j <= 2; j += 4) {
     for (int i = -1; i <= 1; i += 2) {
-      Position checkPosition = Position((char)(pos[0] + i), (char)(pos[1] + j));
+      Position checkPosition = add(position, i, j);
 
       if (checkPosition.isValid()) {
-        if (isPieceAt(checkPosition) &&
-            getPieceAt(checkPosition)->color == otherColor) {
-          validMoves.push_back(posToStr(checkPosition));
-        } else if (!isPieceAt(checkPosition)) {
-          validMoves.push_back(posToStr(checkPosition));
+        if (isPieceAt(checkPosition)) {
+          if (getPieceAt(checkPosition)->color == otherColor) {
+            validMoves[checkPosition] = true;
+          }
+        } else {
+          validMoves[checkPosition] = true;
         }
+
+        controlledSquares->at(color)[checkPosition] = true;
       }
     }
   }
-
-  return validMoves;
 }
 
-std::vector<std::string> Piece::getRookMoves(Piece* piece, char color) {
-  std::vector<std::string> validMoves;
-
-  if (piece == nullptr) {
-    return validMoves;
-  }
-
+void Piece::updateRookMoves() {
   char otherColor;
-  if (piece->color == 'W') {
+  if (color == 'W') {
     otherColor = 'B';
   } else {
     otherColor = 'W';
   }
 
-  std::string pos = posToStr(piece->position);
-
-  // up
-  for (char i = pos[0] + 1; Position(i, pos[1]).isValid(); i++) {
-    if (isPieceAt(i, pos[1])) {
-      if (getPieceAt(i, pos[1])->color == otherColor) {
-        validMoves.push_back(combineChars(i, pos[1]));
-      }
-
-      break;
-    }
-
-    validMoves.push_back(combineChars(i, pos[1]));
-  }
-
-  // down
-  for (char i = pos[0] - 1; Position(i, pos[1]).isValid(); i--) {
-    if (isPieceAt(i, pos[1])) {
-      if (getPieceAt(i, pos[1])->color == otherColor) {
-        validMoves.push_back(combineChars(i, pos[1]));
-      }
-
-      break;
-    }
-
-    validMoves.push_back(combineChars(i, pos[1]));
-  }
-
-  // right
-  for (char i = pos[1] + 1; Position(pos[0], i).isValid(); i++) {
-    if (isPieceAt(pos[0], i)) {
-      if (getPieceAt(pos[0], i)->color == otherColor) {
-        validMoves.push_back(combineChars(pos[0], i));
-      }
-
-      break;
-    }
-
-    validMoves.push_back(combineChars(pos[0], i));
-  }
-
-  // left
-  for (char i = pos[1] - 1; Position(pos[0], i).isValid(); i--) {
-    if (isPieceAt(pos[0], i)) {
-      if (getPieceAt(pos[0], i)->color == otherColor) {
-        validMoves.push_back(combineChars(pos[0], i));
-      }
-
-      break;
-    }
-
-    validMoves.push_back(combineChars(pos[0], i));
-  }
-
-  return validMoves;
-}
-
-std::vector<std::string> Piece::getQueenMoves(Piece* piece, char color) {
-  std::vector<std::string> validMoves = getRookMoves(piece, color);
-  std::vector<std::string> diagonalMoves = getBishopMoves(piece, color);
-  validMoves.insert(validMoves.end(), diagonalMoves.begin(),
-                    diagonalMoves.end());
-
-  return validMoves;
-}
-
-std::vector<std::string> Piece::getKingMoves(Piece* piece, char color) {
-  std::vector<std::string> validMoves;
-
-  if (piece == nullptr) {
-    return validMoves;
-  }
-
-  char otherColor;
-  if (piece->color == 'W') {
-    otherColor = 'B';
-  } else {
-    otherColor = 'W';
-  }
-
-  std::string pos = posToStr(piece->position);
-
-  for (int j = -1; j <= 1; j++) {
-    for (int i = -1; i <= 1; i++) {
-      if (j == 0 && i == 0) {
+  for (int i = -1; i <= 1; i++) {
+    for (int j = -1; j <= 1; j++) {
+      if ((i && j) || (!i && !j)) {
         continue;
       }
 
-      Position checkPosition = Position((char)(pos[0] + i), (char)(pos[1] + j));
+      bool checkForPin = false;
+      Position pinPosition;
 
-      if (checkPosition.isValid()) {
-        if (isPieceAt(checkPosition) &&
-            getPieceAt(checkPosition)->color == otherColor) {
-          validMoves.push_back(posToStr(checkPosition));
-        } else if (!isPieceAt(checkPosition)) {
-          validMoves.push_back(posToStr(checkPosition));
+      for (Position checkPosition = add(position, i, j);
+           checkPosition.isValid(); checkPosition = add(checkPosition, i, j)) {
+        if (isPieceAt(checkPosition)) {
+          if (!checkForPin) {
+            if (getPieceAt(checkPosition)->color == otherColor) {
+              validMoves[checkPosition] = true;
+              controlledSquares->at(color)[checkPosition] = true;
+              pinPosition = checkPosition;
+              checkForPin = true;
+              continue;
+            } else {
+              controlledSquares->at(color)[checkPosition] = true;
+              break;
+            }
+          } else if (checkForPin && getPieceAt(checkPosition)->type == "king" &&
+                     getPieceAt(checkPosition)->color == otherColor) {
+            board->at(pinPosition)->validMoves.clear();
+            break;
+          }
+        }
+
+        if (!checkForPin) {
+          validMoves[checkPosition] = !checkForPin;
+          controlledSquares->at(color)[checkPosition] = true;
         }
       }
     }
   }
+}
 
-  return validMoves;
+void Piece::updateQueenMoves() {
+  updateBishopMoves();
+  updateRookMoves();
+}
+
+void Piece::updateKingMoves() {
+  char otherColor;
+  if (color == 'W') {
+    otherColor = 'B';
+  } else {
+    otherColor = 'W';
+  }
+
+  for (int j = -1; j <= 1; j++) {
+    for (int i = -1; i <= 1; i++) {
+      if (!j && !i) {
+        continue;
+      }
+
+      Position checkPosition = add(position, i, j);
+
+      if (checkPosition.isValid()) {
+        if (isPieceAt(checkPosition) &&
+            getPieceAt(checkPosition)->color == otherColor) {
+          validMoves[checkPosition] = true;
+        } else if (!isPieceAt(checkPosition)) {
+          validMoves[checkPosition] = true;
+        }
+
+        controlledSquares->at(color)[checkPosition] = true;
+      }
+    }
+  }
 }
 
 void Piece::draw() {
@@ -422,30 +330,49 @@ void Piece::draw() {
 }
 
 void Piece::updateValidMoves() {
+  validMoves.clear();
+
   if (type == "pawn") {
-    validMoves = getPawnMoves(this, color);
+    updatePawnMoves();
   } else if (type == "bishop") {
-    validMoves = getBishopMoves(this, color);
+    updateBishopMoves();
   } else if (type == "knight") {
-    validMoves = getKnightMoves(this, color);
+    updateKnightMoves();
   } else if (type == "rook") {
-    validMoves = getRookMoves(this, color);
+    updateRookMoves();
   } else if (type == "queen") {
-    validMoves = getQueenMoves(this, color);
+    updateQueenMoves();
   } else if (type == "king") {
-    validMoves = getKingMoves(this, color);
+    updateKingMoves();
   }
-
-  std::cout << type << std::endl;
-
-  for (int i = 0; i < validMoves.size(); i++) {
-    std::cout << validMoves[i] << std::endl;
-  }
-
-  std::cout << std::endl;
 }
 
-white_pawn::white_pawn(std::string position) : Piece(position) {
+void Piece::invalidateMoveIntoCheck() {
+  char otherColor;
+  if (color == 'W') {
+    otherColor = 'B';
+  } else {
+    otherColor = 'W';
+  }
+
+  if (type != "king") {
+    return;
+  }
+
+  std::vector<Position> positionsToRemove;
+  for (auto it = validMoves.begin(); it != validMoves.end(); it++) {
+    if (controlledSquares->at(otherColor).find(it->first) !=
+        controlledSquares->at(otherColor).end()) {
+      positionsToRemove.push_back(it->first);
+    }
+  }
+
+  for (int i = 0; i < positionsToRemove.size(); i++) {
+    validMoves.erase(positionsToRemove[i]);
+  }
+}
+
+white_pawn::white_pawn(Position position) : Piece(position) {
   type = "pawn";
   color = 'W';
   value = 1;
@@ -456,7 +383,8 @@ white_pawn::white_pawn(std::string position) : Piece(position) {
     glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, width, height, 0, GL_RGBA,
                  GL_UNSIGNED_BYTE, data);
     glGenerateMipmap(GL_TEXTURE_2D);
-    // std::cout << "white_pawn generated at " << position << std::endl;
+    // std::cout << "white_pawn generated at " << position <<
+    // std::endl;
   } else {
     std::cout << "Failed to load white_pawn" << std::endl;
   }
@@ -466,7 +394,7 @@ white_pawn::white_pawn(std::string position) : Piece(position) {
   shader.set1i("texture1", 0);
 }
 
-white_bishop::white_bishop(std::string position) : Piece(position) {
+white_bishop::white_bishop(Position position) : Piece(position) {
   type = "bishop";
   color = 'W';
   value = 3;
@@ -487,7 +415,7 @@ white_bishop::white_bishop(std::string position) : Piece(position) {
   shader.set1i("texture1", 0);
 }
 
-white_knight::white_knight(std::string position) : Piece(position) {
+white_knight::white_knight(Position position) : Piece(position) {
   type = "knight";
   color = 'W';
   value = 3;
@@ -508,7 +436,7 @@ white_knight::white_knight(std::string position) : Piece(position) {
   shader.set1i("texture1", 0);
 }
 
-white_rook::white_rook(std::string position) : Piece(position) {
+white_rook::white_rook(Position position) : Piece(position) {
   type = "rook";
   color = 'W';
   value = 5;
@@ -528,7 +456,7 @@ white_rook::white_rook(std::string position) : Piece(position) {
   shader.set1i("texture1", 0);
 }
 
-white_queen::white_queen(std::string position) : Piece(position) {
+white_queen::white_queen(Position position) : Piece(position) {
   type = "queen";
   color = 'W';
   value = 9;
@@ -548,7 +476,7 @@ white_queen::white_queen(std::string position) : Piece(position) {
   shader.set1i("texture1", 0);
 }
 
-white_king::white_king(std::string position) : Piece(position) {
+white_king::white_king(Position position) : Piece(position) {
   type = "king";
   color = 'W';
   value = 0;
@@ -568,7 +496,7 @@ white_king::white_king(std::string position) : Piece(position) {
   shader.set1i("texture1", 0);
 }
 
-black_pawn::black_pawn(std::string position) : Piece(position) {
+black_pawn::black_pawn(Position position) : Piece(position) {
   type = "pawn";
   color = 'B';
   value = 1;
@@ -588,7 +516,7 @@ black_pawn::black_pawn(std::string position) : Piece(position) {
   shader.set1i("texture1", 0);
 }
 
-black_bishop::black_bishop(std::string position) : Piece(position) {
+black_bishop::black_bishop(Position position) : Piece(position) {
   type = "bishop";
   color = 'B';
   value = 3;
@@ -609,7 +537,7 @@ black_bishop::black_bishop(std::string position) : Piece(position) {
   shader.set1i("texture1", 0);
 }
 
-black_knight::black_knight(std::string position) : Piece(position) {
+black_knight::black_knight(Position position) : Piece(position) {
   type = "knight";
   color = 'B';
   value = 3;
@@ -630,7 +558,7 @@ black_knight::black_knight(std::string position) : Piece(position) {
   shader.set1i("texture1", 0);
 }
 
-black_rook::black_rook(std::string position) : Piece(position) {
+black_rook::black_rook(Position position) : Piece(position) {
   type = "rook";
   color = 'B';
   value = 5;
@@ -650,7 +578,7 @@ black_rook::black_rook(std::string position) : Piece(position) {
   shader.set1i("texture1", 0);
 }
 
-black_queen::black_queen(std::string position) : Piece(position) {
+black_queen::black_queen(Position position) : Piece(position) {
   type = "queen";
   color = 'B';
   value = 9;
@@ -670,7 +598,7 @@ black_queen::black_queen(std::string position) : Piece(position) {
   shader.set1i("texture1", 0);
 }
 
-black_king::black_king(std::string position) : Piece(position) {
+black_king::black_king(Position position) : Piece(position) {
   type = "king";
   color = 'B';
   value = 0;
@@ -691,22 +619,14 @@ black_king::black_king(std::string position) : Piece(position) {
 }
 
 bool Piece::isPieceAt(char col, char row) {
-  if (board->find(combineChars(col, row)) != board->end()) {
-    return true;
-  } else {
-    return false;
-  }
+  return isPieceAt(Position(col, row));
 }
 
 bool Piece::isPieceAt(char col, int row) {
-  if (board->find(combineChars(col, (char)('a' + (row - 1)))) != board->end()) {
-    return true;
-  } else {
-    return false;
-  }
+  return isPieceAt(Position(col, row));
 }
 
-bool Piece::isPieceAt(std::string pos) {
+bool Piece::isPieceAt(Position pos) {
   if (board->find(pos) != board->end()) {
     return true;
   } else {
@@ -714,28 +634,18 @@ bool Piece::isPieceAt(std::string pos) {
   }
 }
 
-bool Piece::isPieceAt(Position pos) { return isPieceAt(posToStr(pos)); }
-
 Piece* Piece::getPieceAt(char col, char row) {
-  std::string position = combineChars(col, row);
-
-  if (!isPieceAt(position)) {
-    return nullptr;
-  }
-
-  return (*board)[position];
+  return getPieceAt(Position(col, row));
 }
 
 Piece* Piece::getPieceAt(char col, int row) {
-  return getPieceAt(col, (char)('a' + row - 1));
+  return getPieceAt(Position(col, row));
 }
 
-Piece* Piece::getPieceAt(std::string position) {
-  if (!isPieceAt(position)) {
+Piece* Piece::getPieceAt(Position pos) {
+  if (!isPieceAt(pos)) {
     return nullptr;
   }
 
-  return (*board)[position];
+  return board->at(pos);
 }
-
-Piece* Piece::getPieceAt(Position pos) { return getPieceAt(posToStr(pos)); }

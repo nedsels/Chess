@@ -6,11 +6,6 @@
 #define _USE_MATH_DEFINES
 
 #include <cmath>
-#include <fstream>
-#include <glm/glm.hpp>
-#include <glm/gtc/matrix_transform.hpp>
-#include <glm/gtc/type_ptr.hpp>
-#include <iostream>
 #include <unordered_map>
 
 #include "correctIncludeOrder.cpp"
@@ -39,8 +34,8 @@ extern bool rightClick;
 extern bool clicking;
 
 // functions
-Position strToPos(std::string posStr);
-std::string posToStr(Position pos);
 std::string combineChars(char a, char b);
+int charToInt(char letter);
+Position add(Position pos1, int colChange, int rowChange);
 
 #endif
