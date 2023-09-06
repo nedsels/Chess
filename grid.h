@@ -1,5 +1,3 @@
-#pragma once
-
 #ifndef GRID_H
 #define GRID_H
 
@@ -7,12 +5,14 @@
 #include "shapes.h"
 
 class Grid {
- public:
-  Grid();
+public:
+    Grid();
+    Grid(glm::vec3 colorDark, glm::vec3 colorLight);
 
-  Rectangle squares[64];
+    Rectangle squares[64];
 
-  void draw(std::unordered_map<Position, Piece*> board);
+    void draw();
+    void changeColor(glm::vec3 colorDark, glm::vec3 colorLight);
 };
 
 #endif

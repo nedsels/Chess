@@ -4,10 +4,10 @@ out vec4 FragColor;
 
 in vec2 textureCoords;
 
-uniform sampler2D texture1;
+uniform sampler2D pieceTexture;
 
 void main() {
-  vec4 piece = texture(texture1, textureCoords);	
+  vec4 piece = texture(pieceTexture, textureCoords);	
   if (piece.a < 0.1f) {
     discard;
   }

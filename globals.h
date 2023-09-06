@@ -1,5 +1,3 @@
-#pragma once
-
 #ifndef GLOBALS_H
 #define GLOBALS_H
 
@@ -19,7 +17,9 @@ extern const unsigned int SCR_HEIGHT;
 
 extern const glm::vec3 darkGray;
 extern const glm::vec3 brown;
+extern const glm::vec3 brown_grayscale;
 extern const glm::vec3 lightBrown;
+extern const glm::vec3 lightBrown_grayscale;
 extern const glm::vec3 blue;
 extern const glm::vec3 yellow;
 
