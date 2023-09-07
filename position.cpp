@@ -54,4 +54,3 @@ bool Position::validPos(std::string pos) {
 }
 
 bool Position::isValid() { return validPos(col, row); }
-

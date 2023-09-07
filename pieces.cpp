@@ -9,6 +9,8 @@ Piece::Piece(char color, std::string type, Position position)
     this->position = position;
     this->type = type;
     this->color = color;
+    promotionOption = false;
+    manualOffset = glm::vec2(0.0f);
 
     if (type == "pawn") {
         value = 1;
@@ -32,7 +34,7 @@ Piece::Piece(char color, std::string type, Position position)
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 
-    std::string texturePath = "pieces/" + combineChars(color, '_') + type + "_2x_ns.png";
+    std::string texturePath = "textures/pieces/" + combineChars(color, '_') + type + "_2x_ns.png";
 
     data = stbi_load(texturePath.c_str(), &width, &height, &nrChannels, 0);
 
@@ -47,32 +49,116 @@ Piece::Piece(char color, std::string type, Position position)
 
     stbi_image_free(data);
 
+    shader.use();
+    shader.set1i("pieceTexture", 0);
+}
+
+Piece::Piece(char color, std::string type, bool promotionOption, glm::vec2 offset)
+{
+    shader = Shader("vertexShader_pieces.vert", "fragmentShader_pieces.frag");
+    hasMoved = false;
+    this->position = Position('\0', -1);
+    this->type = type;
+    this->color = color;
+    this->promotionOption = promotionOption;
+    manualOffset = offset;
+
+    if (type == "pawn") {
+        value = 1;
+    } else if (type == "bishop" || type == "knight") {
+        value = 3;
+    } else if (type == "rook") {
+        value = 5;
+    } else if (type == "queen") {
+        value = 9;
+    } else {
+        value = 0;
+    }
+
+    setup();
+
+    glGenTextures(1, &texture);
+    glBindTexture(GL_TEXTURE_2D, texture);
+
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+
+    std::string texturePath = "textures/pieces/" + combineChars(color, '_') + type + "_2x_ns.png";
+
+    data = stbi_load(texturePath.c_str(), &width, &height, &nrChannels, 0);
+
+    if (data) {
+        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, width, height, 0, GL_RGBA,
+            GL_UNSIGNED_BYTE, data);
+        glGenerateMipmap(GL_TEXTURE_2D);
+        // std::cout << << color << " " << type << " generated at " << position << std::endl;
+    } else {
+        std::cout << "Failed to load " << color << " " << type << std::endl;
+    }
+
+    stbi_image_free(data);
+
+    shader.use();
     shader.set1i("pieceTexture", 0);
 }
 
 void Piece::setup()
 {
-    float vertices[20] = {
+    float vertices[20];
+    if (!promotionOption) {
         // bottom left
-        (2.0f / SCR_WIDTH) * border - 1.0f, (2.0f / SCR_HEIGHT) * border - 1.0f,
-        0.0f, // vertices
-        0.0f, 0.0f, // texture
+        vertices[0] = (2.0f / SCR_WIDTH) * border - 1.0f;
+        vertices[1] = (2.0f / SCR_HEIGHT) * border - 1.0f;
 
         // top left
-        (2.0f / SCR_HEIGHT) * border - 1.0f,
-        (2.0f / SCR_HEIGHT) * (border + squareSize) - 1.0f, 0.0f, // vertices
-        0.0f, 1.0f, // texture
+        vertices[5] = (2.0f / SCR_HEIGHT) * border - 1.0f;
+        vertices[6] = (2.0f / SCR_HEIGHT) * (border + squareSize) - 1.0f;
 
         // bottom right
-        (2.0f / SCR_WIDTH) * (border + squareSize) - 1.0f,
-        (2.0f / SCR_HEIGHT) * border - 1.0f, 0.0f, // vertices
-        1.0f, 0.0f, // texture
+        vertices[10] = (2.0f / SCR_WIDTH) * (border + squareSize) - 1.0f;
+        vertices[11] = (2.0f / SCR_HEIGHT) * border - 1.0f;
 
         // top right
-        (2.0f / SCR_WIDTH) * (border + squareSize) - 1.0f,
-        (2.0f / SCR_HEIGHT) * (border + squareSize) - 1.0f, 0.0f, // vertices
-        1.0f, 1.0f // texture
-    };
+        vertices[15] = (2.0f / SCR_WIDTH) * (border + squareSize) - 1.0f;
+        vertices[16] = (2.0f / SCR_HEIGHT) * (border + squareSize) - 1.0f;
+    } else {
+        // bottom left
+        vertices[0] = -1.0f;
+        vertices[1] = -1.0f;
+
+        // top left
+        vertices[5] = -1.0f;
+        vertices[6] = (2.0f / SCR_HEIGHT) * squareSize - 1.0f;
+
+        // bottom right
+        vertices[10] = (2.0f / SCR_HEIGHT) * squareSize - 1.0f;
+        vertices[11] = -1.0f;
+
+        // top right
+        vertices[15] = (2.0f / SCR_HEIGHT) * squareSize - 1.0f;
+        vertices[16] = (2.0f / SCR_HEIGHT) * squareSize - 1.0f;
+    }
+
+    // z coords
+    vertices[2] = 0.0f;
+    vertices[7] = 0.0f;
+    vertices[12] = 0.0f;
+    vertices[17] = 0.0f;
+
+    // texture coords
+    vertices[3] = 0.0f;
+    vertices[4] = 0.0f;
+
+    vertices[8] = 0.0f;
+    vertices[9] = 1.0f;
+
+    vertices[13] = 1.0f;
+    vertices[14] = 0.0f;
+
+    vertices[18] = 1.0f;
+    vertices[19] = 1.0f;
 
     unsigned int indices[6] = {
         0, 1, 2, // first triangle
@@ -119,57 +205,55 @@ void Piece::updatePawnMoves()
 
     // diagonals
     Position diagonal1 = add(position, -1, dir);
-    controlledSquares->at(color)[diagonal1] = true;
+    visibleSquares->at(color).insert(diagonal1);
 
     if (*(kingPositions->at(otherColor)) == diagonal1) {
-        (*kingInCheck)[otherColor] = true;
-        (*kingAttackSquares)[color][position]++;
-        (*kingAttackSquares)[color][*(kingPositions->at(otherColor))]++;
+        (*piecesCheckingKing)++;
+        (*checkActionSquares)[color].insert(position);
 
-        std::cout << otherColor << " king in check from " << type << " at "
+        /* std::cout << otherColor << " king in check from " << type << " at "
                   << position.col << position.row
                   << ". Attack squares: " << std::endl;
         std::cout << "    " << position.col << position.row << std::endl;
         std::cout << "    " << kingPositions->at(otherColor)->col
                   << kingPositions->at(otherColor)->row << " ("
-                  << (*kingAttackSquares)[color][*(kingPositions->at(otherColor))]
-                  << ")" << std::endl;
+                  << (*checkActionSquares)[color].at(*(kingPositions->at(otherColor)))
+                  << ")" << std::endl; */
     }
 
-    if (isPieceAt(diagonal1) && getPieceAt(diagonal1)->color == otherColor) {
+    if (board->count(diagonal1) && board->at(diagonal1)->color == otherColor) {
         validMoves[diagonal1] = true;
     }
 
     Position diagonal2 = add(position, 1, dir);
-    controlledSquares->at(color)[diagonal2] = true;
+    visibleSquares->at(color).insert(diagonal2);
 
     if (*(kingPositions->at(otherColor)) == diagonal2) {
-        (*kingInCheck)[otherColor] = true;
-        (*kingAttackSquares)[color][position]++;
-        (*kingAttackSquares)[color][*(kingPositions->at(otherColor))]++;
+        (*piecesCheckingKing)++;
+        (*checkActionSquares)[color].insert(position);
 
-        std::cout << otherColor << " king in check from " << type << " at "
+        /* std::cout << otherColor << " king in check from " << type << " at "
                   << position.col << position.row
                   << ". Attack squares: " << std::endl;
         std::cout << "    " << position.col << position.row << std::endl;
         std::cout << "    " << kingPositions->at(otherColor)->col
                   << kingPositions->at(otherColor)->row << " ("
-                  << (*kingAttackSquares)[color][*(kingPositions->at(otherColor))]
-                  << ")" << std::endl;
+                  << (*checkActionSquares)[color][*(kingPositions->at(otherColor))]
+                  << ")" << std::endl; */
     }
 
-    if (isPieceAt(diagonal2) && getPieceAt(diagonal2)->color == otherColor) {
+    if (board->count(diagonal2) && board->at(diagonal2)->color == otherColor) {
         validMoves[diagonal2] = true;
     }
 
     // in front
     Position inFront1 = add(position, 0, dir);
-    if (!isPieceAt(inFront1)) {
+    if (!board->count(inFront1)) {
         validMoves[inFront1] = true;
 
         if ((color == 'W' && position.row == 2) || (color == 'B' && position.row == 7)) {
             Position inFront2 = add(position, 0, 2 * dir);
-            if (!isPieceAt(inFront2)) {
+            if (!board->count(inFront2)) {
                 validMoves[inFront2] = true;
             }
         }
@@ -180,8 +264,8 @@ void Piece::updatePawnMoves()
         Position enPassant1 = add(position, -1, dir);
         Position checkPos1 = add(position, -1, 0);
 
-        if (isPieceAt(checkPos1)) {
-            Piece* checkPiece = getPieceAt(checkPos1);
+        if (board->count(checkPos1)) {
+            Piece* checkPiece = board->at(checkPos1);
 
             if (checkPiece->type == "pawn" && checkPiece->color == otherColor && checkPiece == *enPassantPawn) {
                 validMoves[enPassant1] = true;
@@ -191,8 +275,8 @@ void Piece::updatePawnMoves()
         Position enPassant2 = add(position, 1, dir);
         Position checkPos2 = add(position, 1, 0);
 
-        if (isPieceAt(checkPos2)) {
-            Piece* checkPiece = getPieceAt(checkPos2);
+        if (board->count(checkPos2)) {
+            Piece* checkPiece = board->at(checkPos2);
 
             if (checkPiece->type == "pawn" && checkPiece->color == otherColor && checkPiece == *enPassantPawn) {
                 validMoves[enPassant2] = true;
@@ -218,37 +302,37 @@ void Piece::updateBishopMoves()
             for (Position checkPosition = add(position, colDir, rowDir);
                  checkPosition.isValid();
                  checkPosition = add(checkPosition, colDir, rowDir)) {
-                if (isPieceAt(checkPosition)) {
+                if (board->count(checkPosition)) {
                     if (!checkForPin) {
-                        if (getPieceAt(checkPosition)->color == otherColor) {
+                        if (board->at(checkPosition)->color == otherColor) {
                             validMoves[checkPosition] = true;
-                            controlledSquares->at(color)[checkPosition] = true;
+                            visibleSquares->at(color).insert(checkPosition);
                             pinPosition = checkPosition;
                             checkForPin = true;
 
                             if (checkPosition == *(kingPositions->at(otherColor))) {
-                                (*kingInCheck)[otherColor] = true;
-                                std::cout << otherColor << " king in check from " << type
+                                (*piecesCheckingKing)++;
+                                /* std::cout << otherColor << " king in check from " << type
                                           << " at " << position.col << position.row
-                                          << ". Attack squares: " << std::endl;
+                                          << ". Attack squares: " << std::endl; */
 
-                                for (Position attackSquare = checkPosition;
+                                for (Position attackSquare = add(checkPosition, -colDir, -rowDir);
                                      attackSquare != add(position, -colDir, -rowDir);
                                      attackSquare = add(attackSquare, -colDir, -rowDir)) {
-                                    (*kingAttackSquares)[color][attackSquare]++;
+                                    (*checkActionSquares)[color].insert(attackSquare);
 
-                                    std::cout << "    " << attackSquare.col << attackSquare.row
-                                              << " (" << (*kingAttackSquares)[color][attackSquare]
-                                              << ")" << std::endl;
+                                    /* std::cout << "    " << attackSquare.col << attackSquare.row
+                                              << " (" << (*checkActionSquares)[color][attackSquare]
+                                              << ")" << std::endl; */
                                 }
                             }
 
                             continue;
                         } else {
-                            controlledSquares->at(color)[checkPosition] = true;
+                            visibleSquares->at(color).insert(checkPosition);
                             break;
                         }
-                    } else if (checkForPin && getPieceAt(checkPosition)->type == "king" && getPieceAt(checkPosition)->color == otherColor) {
+                    } else if (checkForPin && board->at(checkPosition)->type == "king" && board->at(checkPosition)->color == otherColor) {
                         board->at(pinPosition)->pinned = true;
                         break;
                     }
@@ -256,7 +340,7 @@ void Piece::updateBishopMoves()
 
                 if (!checkForPin) {
                     validMoves[checkPosition] = !checkForPin;
-                    controlledSquares->at(color)[checkPosition] = true;
+                    visibleSquares->at(color).insert(checkPosition);
                 }
             }
         }
@@ -277,30 +361,29 @@ void Piece::updateKnightMoves()
             Position checkPosition = add(position, i, j);
 
             if (checkPosition.isValid()) {
-                if (isPieceAt(checkPosition)) {
-                    if (getPieceAt(checkPosition)->color == otherColor) {
+                if (board->count(checkPosition)) {
+                    if (board->at(checkPosition)->color == otherColor) {
                         validMoves[checkPosition] = true;
                     }
                 } else {
                     validMoves[checkPosition] = true;
                 }
 
-                controlledSquares->at(color)[checkPosition] = true;
+                visibleSquares->at(color).insert(checkPosition);
 
                 if (checkPosition == *(kingPositions->at(otherColor))) {
-                    (*kingInCheck)[otherColor] = true;
-                    (*kingAttackSquares)[color][position]++;
-                    (*kingAttackSquares)[color][*(kingPositions->at(otherColor))]++;
+                    (*piecesCheckingKing)++;
+                    (*checkActionSquares)[color].insert(position);
 
-                    std::cout << otherColor << " king in check from " << type << " at "
+                    /* std::cout << otherColor << " king in check from " << type << " at "
                               << position.col << position.row
                               << ". Attack squares: " << std::endl;
                     std::cout << "    " << position.col << position.row << std::endl;
                     std::cout
                         << "    " << kingPositions->at(otherColor)->col
                         << kingPositions->at(otherColor)->row << " ("
-                        << (*kingAttackSquares)[color][*(kingPositions->at(otherColor))]
-                        << ")" << std::endl;
+                        << (*checkActionSquares)[color][*(kingPositions->at(otherColor))]
+                        << ")" << std::endl; */
                 }
             }
         }
@@ -311,30 +394,29 @@ void Piece::updateKnightMoves()
             Position checkPosition = add(position, i, j);
 
             if (checkPosition.isValid()) {
-                if (isPieceAt(checkPosition)) {
-                    if (getPieceAt(checkPosition)->color == otherColor) {
+                if (board->count(checkPosition)) {
+                    if (board->at(checkPosition)->color == otherColor) {
                         validMoves[checkPosition] = true;
                     }
                 } else {
                     validMoves[checkPosition] = true;
                 }
 
-                controlledSquares->at(color)[checkPosition] = true;
+                visibleSquares->at(color).insert(checkPosition);
 
                 if (checkPosition == *(kingPositions->at(otherColor))) {
-                    (*kingInCheck)[otherColor] = true;
-                    (*kingAttackSquares)[color][position]++;
-                    (*kingAttackSquares)[color][*(kingPositions->at(otherColor))]++;
+                    (*piecesCheckingKing)++;
+                    (*checkActionSquares)[color].insert(position);
 
-                    std::cout << otherColor << " king in check from " << type << " at "
+                    /* std::cout << otherColor << " king in check from " << type << " at "
                               << position.col << position.row
                               << ". Attack squares: " << std::endl;
                     std::cout << "    " << position.col << position.row << std::endl;
                     std::cout
                         << "    " << kingPositions->at(otherColor)->col
                         << kingPositions->at(otherColor)->row << " ("
-                        << (*kingAttackSquares)[color][*(kingPositions->at(otherColor))]
-                        << ")" << std::endl;
+                        << (*checkActionSquares)[color][*(kingPositions->at(otherColor))]
+                        << ")" << std::endl; */
                 }
             }
         }
@@ -361,37 +443,37 @@ void Piece::updateRookMoves()
 
             for (Position checkPosition = add(position, i, j);
                  checkPosition.isValid(); checkPosition = add(checkPosition, i, j)) {
-                if (isPieceAt(checkPosition)) {
+                if (board->count(checkPosition)) {
                     if (!checkForPin) {
-                        if (getPieceAt(checkPosition)->color == otherColor) {
+                        if (board->at(checkPosition)->color == otherColor) {
                             validMoves[checkPosition] = true;
-                            controlledSquares->at(color)[checkPosition] = true;
+                            visibleSquares->at(color).insert(checkPosition);
                             pinPosition = checkPosition;
                             checkForPin = true;
 
                             if (checkPosition == *(kingPositions->at(otherColor))) {
-                                (*kingInCheck)[otherColor] = true;
-                                std::cout << otherColor << " king in check from " << type
+                                (*piecesCheckingKing)++;
+                                /* std::cout << otherColor << " king in check from " << type
                                           << " at " << position.col << position.row
-                                          << ". Attack squares: " << std::endl;
+                                          << ". Attack squares: " << std::endl; */
 
-                                for (Position attackSquare = checkPosition;
+                                for (Position attackSquare = add(checkPosition, -i, -j);
                                      attackSquare != add(position, -i, -j);
                                      attackSquare = add(attackSquare, -i, -j)) {
-                                    (*kingAttackSquares)[color][attackSquare]++;
+                                    (*checkActionSquares)[color].insert(attackSquare);
 
-                                    std::cout << "    " << attackSquare.col << attackSquare.row
-                                              << " (" << (*kingAttackSquares)[color][attackSquare]
-                                              << ")" << std::endl;
+                                    /* std::cout << "    " << attackSquare.col << attackSquare.row
+                                              << " (" << (*checkActionSquares)[color][attackSquare]
+                                              << ")" << std::endl; */
                                 }
                             }
 
                             continue;
                         } else {
-                            controlledSquares->at(color)[checkPosition] = true;
+                            visibleSquares->at(color).insert(checkPosition);
                             break;
                         }
-                    } else if (checkForPin && getPieceAt(checkPosition)->type == "king" && getPieceAt(checkPosition)->color == otherColor) {
+                    } else if (checkForPin && board->at(checkPosition)->type == "king" && board->at(checkPosition)->color == otherColor) {
                         board->at(pinPosition)->pinned = true;
                         break;
                     }
@@ -399,7 +481,7 @@ void Piece::updateRookMoves()
 
                 if (!checkForPin) {
                     validMoves[checkPosition] = !checkForPin;
-                    controlledSquares->at(color)[checkPosition] = true;
+                    visibleSquares->at(color).insert(checkPosition);
                 }
             }
         }
@@ -430,25 +512,25 @@ void Piece::updateKingMoves()
             Position checkPosition = add(position, i, j);
 
             if (checkPosition.isValid()) {
-                if (isPieceAt(checkPosition) && getPieceAt(checkPosition)->color == otherColor) {
+                if (board->count(checkPosition) && board->at(checkPosition)->color == otherColor) {
                     validMoves[checkPosition] = true;
-                } else if (!isPieceAt(checkPosition)) {
+                } else if (!board->count(checkPosition)) {
                     validMoves[checkPosition] = true;
                 }
 
-                controlledSquares->at(color)[checkPosition] = true;
+                visibleSquares->at(color).insert(checkPosition);
             }
         }
     }
 
     // castling
     Position potentialRookFileA = add(position, -4, 0);
-    if (!hasMoved && board->find(potentialRookFileA) != board->end() && !board->at(potentialRookFileA)->hasMoved && board->find(add(position, -1, 0)) == board->end() && controlledSquares->at(otherColor).find(add(position, -1, 0)) == controlledSquares->at(otherColor).end() && board->find(add(position, -2, 0)) == board->end() && controlledSquares->at(otherColor).find(add(position, -2, 0)) == controlledSquares->at(otherColor).end() && board->find(add(position, -3, 0)) == board->end()) {
+    if (!hasMoved && board->count(potentialRookFileA) && !board->at(potentialRookFileA)->hasMoved && !board->count(add(position, -1, 0)) && !visibleSquares->at(otherColor).count(add(position, -1, 0)) && !board->count(add(position, -2, 0)) && !visibleSquares->at(otherColor).count(add(position, -2, 0)) && !board->count(add(position, -3, 0))) {
         validMoves[add(position, -2, 0)] = true;
     }
 
     Position potentialRookFileH = add(position, 3, 0);
-    if (!hasMoved && board->find(potentialRookFileH) != board->end() && !board->at(potentialRookFileH)->hasMoved && board->find(add(position, 1, 0)) == board->end() && controlledSquares->at(otherColor).find(add(position, 1, 0)) == controlledSquares->at(otherColor).end() && board->find(add(position, 2, 0)) == board->end() && controlledSquares->at(otherColor).find(add(position, 2, 0)) == controlledSquares->at(otherColor).end()) {
+    if (!hasMoved && board->count(potentialRookFileH) && !board->at(potentialRookFileH)->hasMoved && !board->count(add(position, 1, 0)) && !visibleSquares->at(otherColor).count(add(position, 1, 0)) && !board->count(add(position, 2, 0)) && !visibleSquares->at(otherColor).count(add(position, 2, 0))) {
         validMoves[add(position, 2, 0)] = true;
     }
 }
@@ -459,18 +541,23 @@ void Piece::draw()
     glBindTexture(GL_TEXTURE_2D, texture);
 
     shader.use();
-    float offsetX = (2.0f / SCR_WIDTH) * (squareSize * (position.col - 'a'));
-    float offsetY = (2.0f / SCR_WIDTH) * (squareSize * (position.row - 1));
 
-    shader.set2f("offset", offsetX, offsetY);
+    if (!promotionOption) {
+        float offsetX = (2.0f / SCR_WIDTH) * (squareSize * (position.col - 'a'));
+        float offsetY = (2.0f / SCR_HEIGHT) * (squareSize * (position.row - 1));
+        shader.set2f("offset", offsetX, offsetY);
+    } else {
+        float offsetX = (2.0f / SCR_WIDTH) * manualOffset.x;
+        float offsetY = (2.0f / SCR_HEIGHT) * manualOffset.y;
+        shader.set2f("offset", offsetX, offsetY);
+    }
+
     glBindVertexArray(VAO);
     glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
 }
 
 void Piece::updateValidMoves()
 {
-    validMoves.clear();
-
     if (!pinned) {
         if (type == "pawn") {
             updatePawnMoves();
@@ -486,7 +573,7 @@ void Piece::updateValidMoves()
             updateKingMoves();
         }
 
-        if (type != "king" && kingInCheck->at(color)) {
+        if (type != "king" && *kingInCheck) {
             char otherColor;
             if (color == 'W') {
                 otherColor = 'B';
@@ -494,12 +581,12 @@ void Piece::updateValidMoves()
                 otherColor = 'W';
             }
 
-            std::cout << color << " king in check, so removing " << position.col
-                      << position.row << " " << type << " positions:" << std::endl;
+            /* std::cout << color << " king in check, so removing " << position.col
+                      << position.row << " " << type << " positions:" << std::endl; */
             std::vector<Position> positionsToRemove;
 
             for (auto it = validMoves.begin(); it != validMoves.end(); it++) {
-                if (kingAttackSquares->at(otherColor)[it->first] < *maxAttack) {
+                if (!checkActionSquares->at(otherColor).count(it->first)) {
                     positionsToRemove.push_back(it->first);
                 }
             }
@@ -507,11 +594,11 @@ void Piece::updateValidMoves()
             for (int i = 0; i < positionsToRemove.size(); i++) {
                 validMoves.erase(positionsToRemove[i]);
 
-                std::cout << "    " << positionsToRemove[i].col
-                          << positionsToRemove[i].row << std::endl;
+                /* std::cout << "    " << positionsToRemove[i].col
+                          << positionsToRemove[i].row << std::endl; */
             }
 
-            std::cout << std::endl;
+            // std::cout << std::endl;
         }
     }
 }
@@ -531,7 +618,7 @@ void Piece::invalidateMoveIntoCheck()
 
     std::vector<Position> positionsToRemove;
     for (auto it = validMoves.begin(); it != validMoves.end(); it++) {
-        if (controlledSquares->at(otherColor).find(it->first) != controlledSquares->at(otherColor).end()) {
+        if (visibleSquares->at(otherColor).count(it->first)) {
             positionsToRemove.push_back(it->first);
         }
     }
@@ -539,42 +626,4 @@ void Piece::invalidateMoveIntoCheck()
     for (int i = 0; i < positionsToRemove.size(); i++) {
         validMoves.erase(positionsToRemove[i]);
     }
-}
-
-bool Piece::isPieceAt(char col, char row)
-{
-    return isPieceAt(Position(col, row));
-}
-
-bool Piece::isPieceAt(char col, int row)
-{
-    return isPieceAt(Position(col, row));
-}
-
-bool Piece::isPieceAt(Position pos)
-{
-    if (board->find(pos) != board->end()) {
-        return true;
-    } else {
-        return false;
-    }
-}
-
-Piece* Piece::getPieceAt(char col, char row)
-{
-    return getPieceAt(Position(col, row));
-}
-
-Piece* Piece::getPieceAt(char col, int row)
-{
-    return getPieceAt(Position(col, row));
-}
-
-Piece* Piece::getPieceAt(Position pos)
-{
-    if (!isPieceAt(pos)) {
-        return nullptr;
-    }
-
-    return board->at(pos);
 }

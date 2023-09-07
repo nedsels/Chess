@@ -2,12 +2,16 @@
 #define PIECES_H
 
 #include "globals.h"
+#include "grid.h"
 
 class Piece {
 public:
     Piece();
     Piece(char color, std::string type, Position position);
+    Piece(char color, std::string type, bool promotionOption, glm::vec2 offset);
 
+    bool promotionOption;
+    glm::vec2 manualOffset;
     Position position;
     bool hasMoved;
     std::string type;
@@ -16,14 +20,12 @@ public:
     bool pinned;
     std::unordered_map<Position, Piece*>* board;
     std::unordered_map<Position, bool> validMoves;
-    std::unordered_map<char, std::unordered_map<Position, bool>>*
-        controlledSquares;
-    std::unordered_map<char, bool>* kingInCheck;
-    std::unordered_map<char, std::unordered_map<Position, int>>*
-        kingAttackSquares;
+    std::unordered_map<char, std::set<Position>>* visibleSquares;
+    bool* kingInCheck;
+    std::unordered_map<char, std::set<Position>>* checkActionSquares;
     std::unordered_map<char, Position*>* kingPositions;
     Piece** enPassantPawn;
-    int* maxAttack;
+    int* piecesCheckingKing;
 
     void draw();
     void updateValidMoves();
@@ -48,12 +50,6 @@ protected:
     void updateRookMoves();
     void updateQueenMoves();
     void updateKingMoves();
-    bool isPieceAt(char col, char row);
-    bool isPieceAt(char col, int row);
-    bool isPieceAt(Position pos);
-    Piece* getPieceAt(char col, char row);
-    Piece* getPieceAt(char col, int row);
-    Piece* getPieceAt(Position pos);
 };
 
 #endif

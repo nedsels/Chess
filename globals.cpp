@@ -11,6 +11,7 @@ const glm::vec3 lightBrown = glm::vec3(255.0f / 255.0f, 206.0f / 255.0f, 158.0f 
 const glm::vec3 lightBrown_grayscale = glm::vec3(215.0f / 255.0f);
 const glm::vec3 blue = glm::vec3(0.0f, 0.0f, 1.0f);
 const glm::vec3 yellow = glm::vec3(1.0f, 1.0f, 0.0f);
+const glm::vec3 black = glm::vec3(0.0f);
 
 // modifiables
 float border;
@@ -23,17 +24,24 @@ bool rightClick;
 bool clicking;
 
 // functions
-std::string combineChars(char a, char b) {
-	std::string output;
+std::string combineChars(char a, char b)
+{
+    std::string output;
 
-	output.push_back(a);
-	output.push_back(b);
+    output.push_back(a);
+    output.push_back(b);
 
-	return output;
+    return output;
 }
 
 int charToInt(char letter) { return letter - '0'; }
 
-Position add(Position pos1, int colChange, int rowChange) {
-	return Position((char)(pos1.col + colChange), pos1.row + rowChange);
+Position add(Position pos1, int colChange, int rowChange)
+{
+    return Position((char)(pos1.col + colChange), pos1.row + rowChange);
+}
+
+glm::vec2 posToCoord(Position pos)
+{
+    return glm::vec2(squareSize * (pos.col - 'a'), squareSize * (pos.row - 1));
 }

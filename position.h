@@ -44,4 +44,13 @@ inline bool operator!=(Position const& a, Position const& b)
     return a.col != b.col || a.row != b.row;
 }
 
+inline bool operator<(Position const& a, Position const& b)
+{
+    if (a.col == b.col) {
+        return a.row < b.row;
+    } else {
+        return a.col < b.col;
+    }
+}
+
 #endif

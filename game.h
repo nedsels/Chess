@@ -3,6 +3,20 @@
 
 #include "grid.h"
 
+struct PromotionPrompt {
+    PromotionPrompt();
+    PromotionPrompt(Position promotionSquare);
+
+    float distance;
+    float backgroundBorder;
+    glm::vec2 offset;
+    Rectangle background;
+    Rectangle squares[4];
+    Piece pieces[4];
+
+    void draw();
+};
+
 class Game {
 public:
     Game();
@@ -23,13 +37,16 @@ private:
     Rectangle* selectedSquare;
     Piece* selectedPiece;
     std::vector<Rectangle> canMoveSquares;
-    std::unordered_map<char, std::unordered_map<Position, bool>>
-        controlledSquares;
+    std::unordered_map<char, std::set<Position>> visibleSquares;
     std::unordered_map<char, bool> kingInCheck;
-    std::unordered_map<char, std::unordered_map<Position, int>> kingAttackSquares;
-    int maxAttack;
+    std::unordered_map<char, std::set<Position>> checkActionSquares;
+    int piecesCheckingKing;
     std::unordered_map<char, Position*> kingPositions;
     Piece* enPassantPawn;
+    PromotionPrompt* promoPrompt;
+    Position promoPos;
+    bool promotion;
+    int promoSelection;
 
     void nextTurn();
     void updateMousePos();
@@ -40,13 +57,9 @@ private:
     void drawPieces();
     void movePiece(Piece* piece, Position posTo);
     bool noValidMove(char color);
-    bool isPieceAt(char col, char row);
-    bool isPieceAt(char col, int row);
-    bool isPieceAt(Position pos);
-    Piece* getPieceAt(char col, char row);
-    Piece* getPieceAt(char col, int row);
-    Piece* getPieceAt(Position pos);
     bool isValidMove(Position pos);
+    bool isValidPromo(glm::vec2 mouseCoords);
+    int getPromoSelection(glm::vec2 mouseCoords);
 };
 
 #endif
