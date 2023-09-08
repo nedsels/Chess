@@ -4,15 +4,17 @@
 #include "pieces.h"
 #include "shapes.h"
 
-class Grid {
+class Grid
+{
 public:
-    Grid();
-    Grid(glm::vec3 colorDark, glm::vec3 colorLight);
+	Grid();
+	Grid(glm::vec3 colorDark, glm::vec3 colorLight);
 
-    Rectangle squares[64];
+	Rectangle squares[64];
 
-    void draw();
-    void changeColor(glm::vec3 colorDark, glm::vec3 colorLight);
+	void draw();
+	void changeColor(glm::vec3 colorDark, glm::vec3 colorLight);
+	int index(Position pos);
 };
 
 #endif

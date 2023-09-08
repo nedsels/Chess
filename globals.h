@@ -6,6 +6,7 @@
 #include <cmath>
 #include <set>
 #include <unordered_map>
+#include <memory>
 
 #include "correctIncludeOrder.cpp"
 #include "position.h"
@@ -39,6 +40,9 @@ extern bool clicking;
 std::string combineChars(char a, char b);
 int charToInt(char letter);
 Position add(Position pos1, int colChange, int rowChange);
+glm::vec2 posToOffset(Position pos);
 glm::vec2 posToCoord(Position pos);
+Position coordToPos(glm::vec2 coords);
+Position coordToPos(float x, float y);
 
 #endif

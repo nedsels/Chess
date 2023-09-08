@@ -26,22 +26,41 @@ bool clicking;
 // functions
 std::string combineChars(char a, char b)
 {
-    std::string output;
+	std::string output;
 
-    output.push_back(a);
-    output.push_back(b);
+	output.push_back(a);
+	output.push_back(b);
 
-    return output;
+	return output;
 }
 
 int charToInt(char letter) { return letter - '0'; }
 
 Position add(Position pos1, int colChange, int rowChange)
 {
-    return Position((char)(pos1.col + colChange), pos1.row + rowChange);
+	return Position((char)(pos1.col + colChange), pos1.row + rowChange);
+}
+
+glm::vec2 posToOffset(Position pos)
+{
+	return glm::vec2(squareSize * (pos.col - 'a'), squareSize * (pos.row - 1));
 }
 
 glm::vec2 posToCoord(Position pos)
 {
-    return glm::vec2(squareSize * (pos.col - 'a'), squareSize * (pos.row - 1));
+	return glm::vec2(border + squareSize * (pos.col - 'a'), border + squareSize * (pos.row - 1));
+}
+
+Position coordToPos(glm::vec2 coords)
+{
+	return coordToPos(coords.x, coords.y);
+}
+
+Position coordToPos(float x, float y)
+{
+	float m = (7 / (SCR_WIDTH - squareSize - 2 * border));
+	char col = (char)('a' + floor(m * (x - border)));
+	int row = 1 + floor(m * (y - border));
+
+	return Position(col, row);
 }
