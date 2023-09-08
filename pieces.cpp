@@ -41,119 +41,7 @@ Piece::Piece(char color, std::string type, Position position)
 		value = 0;
 	}
 
-	float vertices[20];
-	if (!forPromo)
-	{
-		// bottom left
-		vertices[0] = (2.0f / SCR_WIDTH) * border - 1.0f;
-		vertices[1] = (2.0f / SCR_HEIGHT) * border - 1.0f;
-
-		// top left
-		vertices[5] = (2.0f / SCR_HEIGHT) * border - 1.0f;
-		vertices[6] = (2.0f / SCR_HEIGHT) * (border + squareSize) - 1.0f;
-
-		// bottom right
-		vertices[10] = (2.0f / SCR_WIDTH) * (border + squareSize) - 1.0f;
-		vertices[11] = (2.0f / SCR_HEIGHT) * border - 1.0f;
-
-		// top right
-		vertices[15] = (2.0f / SCR_WIDTH) * (border + squareSize) - 1.0f;
-		vertices[16] = (2.0f / SCR_HEIGHT) * (border + squareSize) - 1.0f;
-	} else
-	{
-		// bottom left
-		vertices[0] = -1.0f;
-		vertices[1] = -1.0f;
-
-		// top left
-		vertices[5] = -1.0f;
-		vertices[6] = (2.0f / SCR_HEIGHT) * squareSize - 1.0f;
-
-		// bottom right
-		vertices[10] = (2.0f / SCR_HEIGHT) * squareSize - 1.0f;
-		vertices[11] = -1.0f;
-
-		// top right
-		vertices[15] = (2.0f / SCR_HEIGHT) * squareSize - 1.0f;
-		vertices[16] = (2.0f / SCR_HEIGHT) * squareSize - 1.0f;
-	}
-
-	// z coords
-	vertices[2] = 0.0f;
-	vertices[7] = 0.0f;
-	vertices[12] = 0.0f;
-	vertices[17] = 0.0f;
-
-	// texture coords
-	vertices[3] = 0.0f;
-	vertices[4] = 0.0f;
-
-	vertices[8] = 0.0f;
-	vertices[9] = 1.0f;
-
-	vertices[13] = 1.0f;
-	vertices[14] = 0.0f;
-
-	vertices[18] = 1.0f;
-	vertices[19] = 1.0f;
-
-	unsigned int indices[6] = {
-		0, 1, 2, // first triangle
-		1, 2, 3 // second triangle
-	};
-
-	glGenVertexArrays(1, &VAO);
-	glGenBuffers(1, &VBO);
-	glGenBuffers(1, &EBO);
-
-	glBindVertexArray(VAO);
-
-	glBindBuffer(GL_ARRAY_BUFFER, VBO);
-	glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
-
-	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO);
-	glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(indices), indices,
-		GL_STATIC_DRAW);
-
-	// positions
-	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 5 * sizeof(float), (void*)0);
-	glEnableVertexAttribArray(0);
-
-	// texture
-	glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 5 * sizeof(float),
-		(void*)(3 * sizeof(float)));
-	glEnableVertexAttribArray(1);
-
-	glBindBuffer(GL_ARRAY_BUFFER, 0);
-	glBindVertexArray(0);
-
-	glGenTextures(1, &texture);
-	glBindTexture(GL_TEXTURE_2D, texture);
-
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-
-	std::string texturePath = "textures/pieces/"
-		+ combineChars(color, '_') + type + "_2x_ns.png";
-
-	data = stbi_load(texturePath.c_str(), &width, &height, &nrChannels, 0);
-
-	if (data)
-	{
-		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, width, height, 0, GL_RGBA,
-			GL_UNSIGNED_BYTE, data);
-		glGenerateMipmap(GL_TEXTURE_2D);
-	} else
-	{
-		std::cout << "Failed to load " << color << " " << type << std::endl;
-	}
-
-	stbi_image_free(data);
-
-	shader.use();
-	shader.set1i("pieceTexture", 0);
+	setup();
 }
 
 Piece::Piece(char color, std::string type, bool forPromo, glm::vec2 offset)
@@ -182,8 +70,12 @@ Piece::Piece(char color, std::string type, bool forPromo, glm::vec2 offset)
 	{
 		value = 0;
 	}
+	setup();
+}
 
-	float vertices[20];
+void Piece::setup()
+{
+	float vertices[16];
 	if (!forPromo)
 	{
 		// bottom left
@@ -191,16 +83,16 @@ Piece::Piece(char color, std::string type, bool forPromo, glm::vec2 offset)
 		vertices[1] = (2.0f / SCR_HEIGHT) * border - 1.0f;
 
 		// top left
-		vertices[5] = (2.0f / SCR_HEIGHT) * border - 1.0f;
-		vertices[6] = (2.0f / SCR_HEIGHT) * (border + squareSize) - 1.0f;
+		vertices[4] = (2.0f / SCR_HEIGHT) * border - 1.0f;
+		vertices[5] = (2.0f / SCR_HEIGHT) * (border + squareSize) - 1.0f;
 
 		// bottom right
-		vertices[10] = (2.0f / SCR_WIDTH) * (border + squareSize) - 1.0f;
-		vertices[11] = (2.0f / SCR_HEIGHT) * border - 1.0f;
+		vertices[8] = (2.0f / SCR_WIDTH) * (border + squareSize) - 1.0f;
+		vertices[9] = (2.0f / SCR_HEIGHT) * border - 1.0f;
 
 		// top right
-		vertices[15] = (2.0f / SCR_WIDTH) * (border + squareSize) - 1.0f;
-		vertices[16] = (2.0f / SCR_HEIGHT) * (border + squareSize) - 1.0f;
+		vertices[12] = (2.0f / SCR_WIDTH) * (border + squareSize) - 1.0f;
+		vertices[13] = (2.0f / SCR_HEIGHT) * (border + squareSize) - 1.0f;
 	} else
 	{
 		// bottom left
@@ -208,36 +100,30 @@ Piece::Piece(char color, std::string type, bool forPromo, glm::vec2 offset)
 		vertices[1] = -1.0f;
 
 		// top left
-		vertices[5] = -1.0f;
-		vertices[6] = (2.0f / SCR_HEIGHT) * squareSize - 1.0f;
+		vertices[4] = -1.0f;
+		vertices[5] = (2.0f / SCR_HEIGHT) * squareSize - 1.0f;
 
 		// bottom right
-		vertices[10] = (2.0f / SCR_HEIGHT) * squareSize - 1.0f;
-		vertices[11] = -1.0f;
+		vertices[8] = (2.0f / SCR_HEIGHT) * squareSize - 1.0f;
+		vertices[9] = -1.0f;
 
 		// top right
-		vertices[15] = (2.0f / SCR_HEIGHT) * squareSize - 1.0f;
-		vertices[16] = (2.0f / SCR_HEIGHT) * squareSize - 1.0f;
+		vertices[12] = (2.0f / SCR_HEIGHT) * squareSize - 1.0f;
+		vertices[13] = (2.0f / SCR_HEIGHT) * squareSize - 1.0f;
 	}
 
-	// z coords
-	vertices[2] = 0.0f;
-	vertices[7] = 0.0f;
-	vertices[12] = 0.0f;
-	vertices[17] = 0.0f;
-
 	// texture coords
+	vertices[2] = 0.0f;
 	vertices[3] = 0.0f;
-	vertices[4] = 0.0f;
 
-	vertices[8] = 0.0f;
-	vertices[9] = 1.0f;
+	vertices[6] = 0.0f;
+	vertices[7] = 1.0f;
 
-	vertices[13] = 1.0f;
-	vertices[14] = 0.0f;
+	vertices[10] = 1.0f;
+	vertices[11] = 0.0f;
 
-	vertices[18] = 1.0f;
-	vertices[19] = 1.0f;
+	vertices[14] = 1.0f;
+	vertices[15] = 1.0f;
 
 	unsigned int indices[6] = {
 		0, 1, 2, // first triangle
@@ -258,12 +144,12 @@ Piece::Piece(char color, std::string type, bool forPromo, glm::vec2 offset)
 		GL_STATIC_DRAW);
 
 	// positions
-	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 5 * sizeof(float), (void*)0);
+	glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 4 * sizeof(float), (void*)0);
 	glEnableVertexAttribArray(0);
 
 	// texture
-	glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 5 * sizeof(float),
-		(void*)(3 * sizeof(float)));
+	glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 4 * sizeof(float),
+		(void*)(2 * sizeof(float)));
 	glEnableVertexAttribArray(1);
 
 	glBindBuffer(GL_ARRAY_BUFFER, 0);

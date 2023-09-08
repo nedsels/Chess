@@ -83,17 +83,16 @@ void Rectangle::setup()
 	float x = offset.x;
 	float y = offset.y;
 
-	float vertices[12] = {
+	float vertices[8] = {
 		// bottom left
-		(2.0f / SCR_WIDTH) * x - 1.0f, (2.0f / 768.0f) * y - 1.0f, 0.0f,
+		(2.0f / SCR_WIDTH) * x - 1.0f, (2.0f / 768.0f) * y - 1.0f,
 		// top left
 		(2.0f / SCR_HEIGHT) * x - 1.0f, (2.0f / 768.0f) * (y + height) - 1.0f,
-		0.0f,
 		// bottom right
-		(2.0f / SCR_WIDTH) * (x + width) - 1.0f, (2.0f / 768.0f) * y - 1.0f, 0.0f,
+		(2.0f / SCR_WIDTH) * (x + width) - 1.0f, (2.0f / 768.0f) * y - 1.0f,
 		// top right
 		(2.0f / SCR_WIDTH) * (x + width) - 1.0f,
-		(2.0f / SCR_HEIGHT) * (y + height) - 1.0f, 0.0f
+		(2.0f / SCR_HEIGHT) * (y + height) - 1.0f
 	};
 
 	unsigned int indices[6] = {
@@ -116,7 +115,7 @@ void Rectangle::setup()
 
 	// positions
 	glEnableVertexAttribArray(0);
-	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void*)0);
+	glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 2 * sizeof(float), (void*)0);
 
 	glBindBuffer(GL_ARRAY_BUFFER, 0);
 	glBindVertexArray(0);

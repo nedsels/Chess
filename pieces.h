@@ -32,6 +32,7 @@ public:
 	std::unordered_map<char, Position*>* kingPositions;
 	std::shared_ptr<Piece>* enPassantPawn;
 
+	void setup();
 	void draw();
 	void process();
 	void invalidateMoveIntoCheck();
