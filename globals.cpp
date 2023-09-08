@@ -60,7 +60,7 @@ Position coordToPos(float x, float y)
 {
 	float m = (7 / (SCR_WIDTH - squareSize - 2 * border));
 	char col = (char)('a' + floor(m * (x - border)));
-	int row = 1 + floor(m * (y - border));
+	int row = 1 + (int)floor(m * (y - border));
 
 	return Position(col, row);
 }

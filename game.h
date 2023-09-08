@@ -28,12 +28,14 @@ public:
 
 private:
 	// Setup / update
+	Position mousePos;
 	Rectangle background;
 	Grid grid;
 	std::unordered_map<Position, std::shared_ptr<Piece>> board;
 	char turn;
 	bool gameOver;
-	Position mousePos;
+	int numPieces;
+	int fiftyMoveCounter;
 
 	void createStartingBoard();
 	void newPiece(char color, std::string type, Position pos);
@@ -43,6 +45,7 @@ private:
 	void updatePieces();
 	void drawPieces();
 	void deletePiece(std::shared_ptr<Piece> piece);
+	void detectGameOver();
 
 	// Highlight squares
 	std::shared_ptr<Rectangle> randHighlightSquare;

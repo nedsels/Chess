@@ -3,6 +3,7 @@
 Game::Game()
 {
 	gameOver = false;
+	numPieces = 0;
 
 	leftClick = false;
 	rightClick = false;
@@ -21,10 +22,12 @@ Game::Game()
 	canMoveSquares = std::vector<Rectangle>();
 	visibleSquares = std::unordered_map<char, std::set<Position>>();
 	kingPositions = std::unordered_map<char, Position*>();
+	fiftyMoveCounter = 0;
 
 	createStartingBoard();
 
 	updatePieces();
+	detectGameOver();
 }
 
 void Game::createStartingBoard()
@@ -75,6 +78,8 @@ void Game::newPiece(char color, std::string type, Position pos)
 	board[pos]->piecesCheckingKing = &piecesCheckingKing;
 
 	board[pos]->enPassantPawn = &enPassantPawn;
+
+	numPieces++;
 }
 
 void Game::updatePieces()
@@ -196,8 +201,10 @@ void Game::movePiece(std::shared_ptr<Piece> piece, Position posTo)
 	Position posFrom = piece->position;
 
 	// If piece being taken, erase it first
+	bool capture = false;
 	if (board.count(posTo))
 	{
+		capture = true;
 		deletePiece(board[posTo]);
 	}
 
@@ -234,6 +241,7 @@ void Game::movePiece(std::shared_ptr<Piece> piece, Position posTo)
 	}
 
 	// Castling
+	bool castling = false;
 	if (piece->type == "king" && !piece->hasMoved)
 	{
 		int row = piece->position.row;
@@ -244,29 +252,30 @@ void Game::movePiece(std::shared_ptr<Piece> piece, Position posTo)
 		if (posTo == longCastle)
 		{
 			movePiece(board[Position('a', row)], Position('d', row));
-			nextTurn();
+			castling = true;
 
 		} else if (posTo == shortCastle)
 		{
 			movePiece(board[Position('h', row)], Position('f', row));
-			nextTurn();
+			castling = true;
 		}
 	}
 
-	nextTurn();
-
-	updatePieces();
-
-	if (noValidMove(turn))
+	if (piece->type != "pawn" && !capture)
 	{
-		std::cout << "GAME OVER" << std::endl;
-		gameOver = true;
+		fiftyMoveCounter++;
+	}
+
+	if (!castling)
+	{
+		nextTurn();
 	}
 }
 
 void Game::deletePiece(std::shared_ptr<Piece> piece)
 {
 	board.erase(piece->position);
+	numPieces--;
 }
 
 void Game::initiatePromo(Position pos)
@@ -278,14 +287,12 @@ void Game::initiatePromo(Position pos)
 	// Change all squares but promotion square to gray
 	grid.changeColor(brown_grayscale, lightBrown_grayscale);
 
-	int gridIndex = grid.index(pos);
-	if ((gridIndex % 2 == 0 && gridIndex / 8 % 2 == 0)
-		|| (gridIndex % 2 == 1 && gridIndex / 8 % 2 == 1))
+	if (!grid.lightSquare(pos))
 	{
-		grid.squares[gridIndex].color = brown;
+		grid.squares[grid.gridIndex(pos)].color = brown;
 	} else
 	{
-		grid.squares[gridIndex].color = lightBrown;
+		grid.squares[grid.gridIndex(pos)].color = lightBrown;
 	}
 }
 
@@ -301,6 +308,93 @@ void Game::updateCanMoveSquares()
 			canMoveSquares.push_back(Rectangle(*it, blue, 0.7f));
 		}
 	}
+}
+
+void Game::detectGameOver()
+{
+	// Stalemate and checkmate
+	if (noValidMove(turn))
+	{
+		gameOver = true;
+
+		std::cout << "GAME OVER" << std::endl;
+
+		if (kingInCheck[turn])
+		{
+			if (turn == 'W')
+			{
+				std::cout << "Black wins" << std::endl;
+			} else
+			{
+				std::cout << "White wins" << std::endl;
+			}
+		} else
+		{
+			std::cout << "Draw by stalemate" << std::endl;
+		}
+	}
+
+	// Insufficient material
+	bool insufficientMaterial = false;
+
+	if (numPieces == 2)
+	{ // Only kings
+		insufficientMaterial = true;
+	} else if (numPieces <= 4)
+	{
+		bool onlyKingsAndBishops = true;
+		std::vector<Position> bishopPositions;
+
+		bool onlyKingsAndKnights = true;
+		int numKnights = 0;
+
+		for (auto it = board.begin(); it != board.end(); it++)
+		{
+			if (it->second->type != "bishop" && it->second->type != "king")
+			{
+				onlyKingsAndBishops = false;
+			} else if (it->second->type == "bishop")
+			{
+				bishopPositions.push_back(it->first);
+			}
+
+			if (it->second->type != "knight" && it->second->type != "king")
+			{
+				onlyKingsAndKnights = false;
+			} else if (it->second->type == "knight")
+			{
+				numKnights++;
+			}
+		}
+
+
+		if (onlyKingsAndBishops
+			&& (bishopPositions.size() == 1 // If only one bishop
+				|| (bishopPositions.size() == 2 // If 2 bishops on same color squares
+					&& (grid.lightSquare(bishopPositions[0])
+						== grid.lightSquare(bishopPositions[1]))))
+			|| (onlyKingsAndKnights && numKnights == 1)) // If only one knight
+		{
+			insufficientMaterial = true;
+		}
+	}
+
+	if (insufficientMaterial)
+	{
+		gameOver = true;
+
+		std::cout << "GAME OVER" << std::endl;
+		std::cout << "Draw by insufficient material" << std::endl;
+	}
+
+	// Fifty move rule (commented out -- only draw by offer)
+	/* if (fiftyMoveCounter >= 50)
+	{
+		gameOver = true;
+
+		std::cout << "GAME OVER" << std::endl;
+		std::cout << "Draw by 50 move rule" << std::endl;
+	} */
 }
 
 void Game::updateRandHighlightSquare()
@@ -407,6 +501,9 @@ void Game::nextTurn()
 	{
 		turn = 'W';
 	}
+
+	updatePieces();
+	detectGameOver();
 }
 
 bool Game::noValidMove(char color)

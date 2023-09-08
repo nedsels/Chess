@@ -14,7 +14,8 @@ public:
 
 	void draw();
 	void changeColor(glm::vec3 colorDark, glm::vec3 colorLight);
-	int index(Position pos);
+	int gridIndex(Position pos);
+	bool lightSquare(Position pos);
 };
 
 #endif
