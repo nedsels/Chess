@@ -21,14 +21,14 @@ public:
 	int dir;
 	bool hasMoved;
 	bool pinned;
-	std::set<Position> validMoves;
+	std::unordered_set<Position> validMoves;
 
 	// Pointers to Game() attributes
 	std::unordered_map<Position, std::shared_ptr<Piece>>* board;
-	std::unordered_map<char, std::set<Position>>* visibleSquares;
+	std::unordered_map<char, std::unordered_set<Position>>* visibleSquares;
 	bool* kingInCheck;
 	int* piecesCheckingKing;
-	std::unordered_map<char, std::set<Position>>* checkActionSquares;
+	std::unordered_map<char, std::unordered_set<Position>>* checkActionSquares;
 	std::unordered_map<char, Position*>* kingPositions;
 	std::shared_ptr<Piece>* enPassantPawn;
 

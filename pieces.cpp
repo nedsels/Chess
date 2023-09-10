@@ -22,7 +22,7 @@ Piece::Piece(char color, std::string type, Position position)
 
 	forPromo = false;
 	manualOffset = glm::vec2(0.0f);
-	validMoves = std::set<Position>();
+	validMoves = std::unordered_set<Position>();
 
 	if (type == "pawn")
 	{
@@ -263,7 +263,7 @@ void Piece::processBishop()
 			{
 				if (!checkForPin)
 				{
-					// [not checking for pin] If piece at position:
+					// [not checking for pin] If piece at checkPosition:
 					//     a. If opposite color, add checkPosition to valid moves and
 					//        visible squares, and start checking for pin
 					//     b. If same color, add checkPosition to visible squares
@@ -305,11 +305,14 @@ void Piece::processBishop()
 					// c.
 					validMoves.insert(checkPosition);
 					visibleSquares->at(color).insert(checkPosition);
-				} else if (checkForPin && board->count(checkPosition)
-					&& board->at(checkPosition)->type == "king"
-					&& board->at(checkPosition)->color == otherColor)
+				} else if (checkForPin && board->count(checkPosition))
 				{
-					board->at(pinPosition)->pinned = true;
+					if (board->at(checkPosition)->type == "king"
+						&& board->at(checkPosition)->color == otherColor)
+					{
+						board->at(pinPosition)->pinned = true;
+					}
+
 					break;
 				}
 			}
@@ -332,6 +335,9 @@ void Piece::processKnight()
 
 		if (checkPosition.isValid())
 		{
+			// Add to visible squares
+			visibleSquares->at(color).insert(checkPosition);
+
 			// If no piece in checkPosition, or piece of opposite color, add to valid moves
 			if (!board->count(checkPosition)
 				|| (board->count(checkPosition)
@@ -339,9 +345,6 @@ void Piece::processKnight()
 			{
 				validMoves.insert(checkPosition);
 			}
-
-			// Add to visible squares regardless
-			visibleSquares->at(color).insert(checkPosition);
 
 			if (checkPosition == *(kingPositions->at(otherColor)))
 			{
@@ -373,7 +376,7 @@ void Piece::processRook()
 			{
 				if (!checkForPin)
 				{
-					// [not checking for pin] If piece at position:
+					// [not checking for pin] If piece at checkPosition:
 					//     a. If opposite color, add checkPosition to valid moves and
 					//        visible squares, and start checking for pin
 					//     b. If same color, add checkPosition to visible squares
@@ -415,11 +418,14 @@ void Piece::processRook()
 					// c.
 					validMoves.insert(checkPosition);
 					visibleSquares->at(color).insert(checkPosition);
-				} else if (checkForPin && board->count(checkPosition)
-					&& board->at(checkPosition)->type == "king"
-					&& board->at(checkPosition)->color == otherColor)
+				} else if (checkForPin && board->count(checkPosition))
 				{
-					board->at(pinPosition)->pinned = true;
+					if (board->at(checkPosition)->type == "king"
+						&& board->at(checkPosition)->color == otherColor)
+					{
+						board->at(pinPosition)->pinned = true;
+					}
+
 					break;
 				}
 			}

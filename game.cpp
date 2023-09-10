@@ -20,7 +20,7 @@ Game::Game()
 	promoSelection = -1;
 	kingInCheck = std::unordered_map<char, bool>();
 	canMoveSquares = std::vector<Rectangle>();
-	visibleSquares = std::unordered_map<char, std::set<Position>>();
+	visibleSquares = std::unordered_map<char, std::unordered_set<Position>>();
 	kingPositions = std::unordered_map<char, Position*>();
 	fiftyMoveCounter = 0;
 
@@ -38,7 +38,6 @@ void Game::createStartingBoard()
 	newPiece('W', "bishop", (Position)"c1");
 	newPiece('W', "queen", (Position)"d1");
 	newPiece('W', "king", (Position)"e1");
-	kingPositions['W'] = &(board[(Position)"e1"]->position);
 	newPiece('W', "bishop", (Position)"f1");
 	newPiece('W', "knight", (Position)"g1");
 	newPiece('W', "rook", (Position)"h1");
@@ -49,7 +48,6 @@ void Game::createStartingBoard()
 	newPiece('B', "bishop", (Position)"c8");
 	newPiece('B', "queen", (Position)"d8");
 	newPiece('B', "king", (Position)"e8");
-	kingPositions['B'] = &(board[(Position)"e8"]->position);
 	newPiece('B', "bishop", (Position)"f8");
 	newPiece('B', "knight", (Position)"g8");
 	newPiece('B', "rook", (Position)"h8");
@@ -80,6 +78,11 @@ void Game::newPiece(char color, std::string type, Position pos)
 	board[pos]->enPassantPawn = &enPassantPawn;
 
 	numPieces++;
+
+	if (type == "king")
+	{
+		kingPositions[color] = &(board[pos]->position);
+	}
 }
 
 void Game::updatePieces()
@@ -124,14 +127,14 @@ void Game::updatePieces()
 		}
 	}
 
-	// updateValidMoves() does not account for moves into check
+	// process() does not account for moves into check
 	board[*kingPositions[turn]]->invalidateMoveIntoCheck();
 	board[*kingPositions[otherColor]]->invalidateMoveIntoCheck();
 }
 
 void Game::prepToUpdatePieces()
 {
-	// Clears/resets certain attributes in the pieces so they can be updated properly
+	// Clears/resets certain attributes so the pieces can be updated properly
 	visibleSquares['W'].clear();
 	visibleSquares['B'].clear();
 

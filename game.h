@@ -59,9 +59,9 @@ private:
 
 	// Handling king in check
 	std::unordered_map<char, Position*> kingPositions;
-	std::unordered_map<char, std::set<Position>> visibleSquares;
+	std::unordered_map<char, std::unordered_set<Position>> visibleSquares;
 	std::unordered_map<char, bool> kingInCheck;
-	std::unordered_map<char, std::set<Position>> checkActionSquares;
+	std::unordered_map<char, std::unordered_set<Position>> checkActionSquares;
 	int piecesCheckingKing;
 
 	// Promotion
